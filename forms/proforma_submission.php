@@ -66,8 +66,23 @@ if ($fromform = $mform->get_data()) {
                 throw new invalid_parameter_exception('Supplied file must be a xml or zip file.');
             }
 
-            // fetch the execution file group manager and add the file to the execution files list.
+            // 1. fetch the execution file group manager
+            // 2. delete all existing task files
+            // 3. add task file to execution files list
             $execution_fgm = $vpl->get_execution_fgm();
+            $filelist = $execution_fgm->getfilelist();
+            foreach ($filelist as $executionfile) {
+                if (str_starts_with($executionfile, 'task/')) {
+                    // Datei löschen
+                    $execution_fgm->addFile($executionfile, null);
+                    // Filelist aktualisieren
+                    $index = array_search($executionfile, $filelist);
+                    if ($index) {
+                        unset($filelist[$index]);
+                        $execution_fgm->setfilelist(array_values($filelist));
+                    }
+                }
+            }
             $execution_fgm->addFile("task/" . $filename, $filecontent);
 
             if ($filetype == 'zip') {
@@ -156,6 +171,8 @@ if ($fromform = $mform->get_data()) {
             // Check if there are files visible by students and if yes, add them to the requested files list.
             // get required files group manager
             $required_fgm = $vpl->get_required_fgm();
+            // delete all existing required files
+            $required_fgm->deleteallfiles();
             $filesElement = $doc->getElementsByTagNameNS($namespace, 'files')[0];
             foreach ($filesElement->childNodes as $fileElement) {
                 if ($fileElement->nodeType === XML_ELEMENT_NODE) {
@@ -198,6 +215,8 @@ if ($fromform = $mform->get_data()) {
             foreach ($files as $fi) {
                 $fi->delete();
             }
+            // Clear course cache, so changes will be present on reload
+            rebuild_course_cache($instance->course, true);
         }
     }
 }
