@@ -30,6 +30,9 @@ require_once(dirname(__FILE__).'/jail/jailserver_manager.class.php');
 require_once(dirname(__FILE__).'/jail/running_processes.class.php');
 
 class mod_vpl_submission_CE extends mod_vpl_submission {
+    /**
+     * Associative array for detecting the programming language based on a file's extension
+     */
     private static $languageext = [
         'ada' => 'ada',
         'adb' => 'ada',
@@ -90,6 +93,23 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
         'ruby' => 'ruby',
         'ts' => 'typescript',
     ];
+
+    /**
+     * Associative array for detecting the build system based on the configuration file
+     */
+    private static $languageconfig = [
+        'Makefile' => 'make',
+        'makefile' => 'make',
+    ];
+    /*
+        Future config files.
+        CMakeLists.txt => cmake
+        build.ninja => ninja
+        build.xml => ant
+        build.gradle => gradle
+        pom.xml => maven
+    */
+
     private static $scriptname = [
         'vpl_run.sh' => 'run',
         'vpl_debug.sh' => 'debug',
@@ -126,6 +146,11 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
      * @return string programming language name
      */
     public static function get_pln($filelist) {
+        foreach ($filelist as $checkfilename) {
+            if (isset(self::$languageconfig[$checkfilename])) {
+                return self::$languageconfig[$checkfilename];
+            }
+        }
         foreach ($filelist as $checkfilename) {
             $ext = pathinfo( $checkfilename, PATHINFO_EXTENSION );
             if (isset(self::$languageext[$ext])) {
@@ -406,6 +431,8 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
         // Info send with script.
         $info = "#!/bin/bash\n";
         $info .= vpl_bash_export('VPL_LANG', vpl_get_lang());
+        $info .= vpl_bash_export('MOODLE_COURSE_ID', $vpl->get_course()->id);
+        $info .= vpl_bash_export('MOODLE_ACTIVITY_ID', $vpl->get_course_module()->id);
         if (isset($data->userid)) {
             $userid = $data->userid;
             $courseid = $data->courseid;
@@ -464,17 +491,15 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
             }
         }
         $premadescripts = self::get_scripts($vpl, $data);
-        for ($i = 0; $i <= $data->type; $i ++) {
-            $filename = self::$scriptlist[$i];
-            if (isset($data->files[$filename]) && trim($data->files[$filename]) > '') { // Use custom script.
-                if (substr($data->files[$filename], 0, 2) != '#!') { // Fixes script adding bash if no shebang.
-                    $data->files[$filename] = "#!/bin/bash\n" . $data->files[$filename];
-                }
-                unset($premadescripts[$filename]);
-            }
-        }
         foreach ($premadescripts as $filename => $filedata) {
-            if (trim($filedata) > '') {
+            if (isset($data->files[$filename]) && trim($data->files[$filename]) > '') { // Use custom script.
+                if (vpl_fileextension($filename) == 'sh') {
+                    $filecontent = $data->files[$filename];
+                    if (substr($filecontent, 0, 2) != '#!') { // Fixes script adding bash if no shebang.
+                        $data->files[$filename] = "#!/bin/bash\n" . $filecontent;
+                    }
+                }
+            } else {
                 $data->files[$filename] = $filedata;
                 $data->filestodelete[$filename] = 1;
             }
@@ -721,7 +746,9 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
                     $data = new StdClass();
                     $data->grade = $this->proposedGrade( $response['execution'] );
                     $data->comments = $this->proposedComment( $response['execution'] );
-                    $this->set_grade( $data, true );
+                    $this->set_grade($data, true );
+                } else if ($this->get_instance()->dategraded > 0 && $this->get_instance()->grader == 0) {
+                    $this->remove_grade();
                 }
             }
         }

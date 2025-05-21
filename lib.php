@@ -438,7 +438,7 @@ function vpl_user_outline($course, $user, $mod, $instance) {
             $info = get_string( 'submission', VPL, count( $subs ) );
         }
         if ($subinstance->dategraded) {
-            $info .= '<br>' . get_string('gradenoun') . ': ' . $submission->get_grade_core();
+            $info .= '<br>' . get_string(vpl_get_gradenoun_str()) . ': ' . $submission->get_grade_core();
         }
         $url = vpl_mod_href( 'forms/submissionview.php', 'id', $vpl->get_course_module()->id, 'userid', $user->id );
         $return->info = '<a href="' . $url . '">' . $info . '</a>';
@@ -605,6 +605,7 @@ function mod_vpl_get_fontawesome_icon_map() {
             'mod_vpl:grade' => 'fa-check-circle',
             'mod_vpl:previoussubmissionslist' => 'fa-history',
             'mod_vpl:modulenameplural' => 'fa-list-ul',
+            'mod_vpl:checkgroups' => 'fa-group',
             'mod_vpl:description' => 'fa-tasks',
             'mod_vpl:similarity' => 'fa-binoculars',
             'mod_vpl:submissionslist' => 'fa-list-ul',
@@ -621,6 +622,7 @@ function mod_vpl_get_fontawesome_icon_map() {
             'mod_vpl:cancel' => 'fa-remove',
             'mod_vpl:delete' => 'fa-trash',
             'mod_vpl:editthis' => 'fa-edit',
+            'mod_vpl:exitrole' => 'fa-close',
     ];
 }
 
@@ -683,7 +685,7 @@ function vpl_extend_navigation(navigation_node $vplnode, $course, $module, $cm) 
     if (! $example) {
         if ($grader && $USER->id != $userid) {
             $url = new moodle_url( '/mod/vpl/forms/gradesubmission.php', $parm);
-            $node = vpl_navi_node_create($vplnode, 'gradenoun', $url, navigation_node::TYPE_SETTING, 'core');
+            $node = vpl_navi_node_create($vplnode, vpl_get_gradenoun_str(), $url, navigation_node::TYPE_SETTING, 'core');
             $vplnode->add_node( $node );
         }
         $url = new moodle_url( '/mod/vpl/forms/submissionview.php', $parm );
@@ -791,7 +793,7 @@ function vpl_extend_settings_navigation(settings_navigation $settings, navigatio
         $testact->add_node( $node, $keybefore );
         if ( $userid != $USER->id ) { // Auto grading has sense?
             $url = new moodle_url( '/mod/vpl/forms/gradesubmission.php', $parms );
-            $node = vpl_navi_node_create($testact, 'gradenoun', $url, navigation_node::TYPE_SETTING, 'core');
+            $node = vpl_navi_node_create($testact, vpl_get_gradenoun_str(), $url, navigation_node::TYPE_SETTING, 'core');
             $testact->add_node( $node, $keybefore );
         }
         $url = new moodle_url( '/mod/vpl/views/previoussubmissionslist.php', $parms );
@@ -799,6 +801,9 @@ function vpl_extend_settings_navigation(settings_navigation $settings, navigatio
         $testact->add_node( $node, $keybefore );
         $url = new moodle_url( '/mod/vpl/index.php', ['id' => $PAGE->cm->course]);
         $node = vpl_navi_node_create($vplnode, 'modulenameplural', $url, navigation_node::TYPE_SETTING);
+        $vplnode->add_node( $node, $fkn );
+        $url = new moodle_url( '/mod/vpl/views/checkvpls.php', ['id' => $PAGE->cm->course]);
+        $node = vpl_navi_node_create($vplnode, 'checkgroups', $url, navigation_node::TYPE_SETTING);
         $vplnode->add_node( $node, $fkn );
     }
 }
@@ -923,12 +928,7 @@ function vpl_reset_instance_userdata($vplid) {
     ] );
     // Delete overrides and associated events.
     $vpl = new mod_vpl(null, $vplid);
-    $sql = 'SELECT ao.id as aid, o.*, ao.userid as userids, ao.groupid as groupids
-                FROM {vpl_overrides} o
-                LEFT JOIN {vpl_assigned_overrides} ao ON ao.override = o.id
-                WHERE o.vpl = :vplid';
-    $overridesseparated = $DB->get_records_sql($sql, ['vplid' => $vplid]);
-    $overrides = vpl_agregate_overrides($overridesseparated);
+    $overrides = vpl_get_overrides($vplid);
     foreach ($overrides as $override) {
         $vpl->update_override_calendar_events($override, null, true);
     }

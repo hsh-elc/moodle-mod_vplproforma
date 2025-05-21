@@ -163,6 +163,12 @@ class mod_vpl {
     protected $errors = [];
 
     /**
+     * An internal cache for grade information.
+     *
+     */
+    protected $gradeinfo = null;
+
+    /**
      * The graders of this activity and group cached
      *
      * @var object[][]
@@ -196,10 +202,15 @@ class mod_vpl {
             self::$instancescache[$table] = [];
         }
         if (! isset(self::$instancescache[$table][$id])) {
-            self::$instancescache[$table][$id] = $DB->get_record($table, ["id" => $id]);
+            $instance = $DB->get_record($table, ["id" => $id]);
+            if ($instance !== false && $table == VPL) {
+                self::set_null_field_empty($instance);
+            }
+            self::$instancescache[$table][$id] = $instance;
         }
         return self::$instancescache[$table][$id];
     }
+
     /**
      * Remove one record or all records from cache
      *
@@ -212,6 +223,32 @@ class mod_vpl {
             self::$instancescache = [];
         } else {
             unset(self::$instancescache[$table][$id]);
+        }
+    }
+
+    /**
+     * Set string field with null to empty string.
+     *
+     * @param object $vplinstace
+     * @return void
+     */
+    public static function set_null_field_empty($vplinstace) {
+        $fields = [
+            'shortdescription',
+            'intro',
+            'requirednet',
+            'password',
+            'variationtitle',
+            'jailservers',
+            'reductionbyevaluation',
+            'sebkeys',
+            'runscript',
+            'debugscript',
+        ];
+        foreach ($fields as $field) {
+            if (property_exists($vplinstace, $field) && $vplinstace->$field == null) {
+                $vplinstace->$field = '';
+            }
         }
     }
 
@@ -601,7 +638,8 @@ class mod_vpl {
             }
             require_once('forms/password_form.php');
             $this->print_header();
-            $mform = new mod_vpl_password_form($_SERVER['SCRIPT_NAME'], $this);
+            $posturl = $_SERVER['SCRIPT_NAME'] . "?id={$this->cm->id}";
+            $mform = new mod_vpl_password_form($posturl, $this);
             $passattempt = 'vpl_password_attempt' . $this->get_instance()->id;
             if (isset( $SESSION->$passattempt)) {
                 vpl_notice(get_string('attemptnumber', VPL, $SESSION->$passattempt),
@@ -1175,12 +1213,8 @@ class mod_vpl {
      * @return bool
      */
     public function is_group_activity() {
-        if (! isset( $this->group_activity )) {
-            $cm = $this->get_course_module();
-            $this->group_activity = $cm->groupingid > 0 && $this->get_instance()->worktype == 1;
-            // TODO check groups_get_activity_groupmode($cm)==SEPARATEGROUPS.
-        }
-        return $this->group_activity;
+        $cm = $this->get_course_module();
+        return $cm->groupingid > 0 && $this->get_instance()->worktype == 1;
     }
 
     /**
@@ -1371,6 +1405,12 @@ class mod_vpl {
     }
 
     /**
+     * Property for cache scale record
+     * @var object
+     */
+    private $scale;
+
+    /**
      * Return scale record if grade < 0
      *
      * @return Object or false
@@ -1395,19 +1435,19 @@ class mod_vpl {
      */
     public function get_grade_info() {
         global $CFG, $USER;
-        if (! isset( $this->grade_info )) {
-            $this->grade_info = false;
+        if (! isset( $this->gradeinfo )) {
+            $this->gradeinfo = false;
             if ($this->get_instance()->grade != 0) { // If 0 then NO GRADE.
                 $userid = ($this->has_capability( VPL_GRADE_CAPABILITY ) || $this->has_capability(
                         VPL_MANAGE_CAPABILITY )) ? null : $USER->id;
                 require_once($CFG->libdir . '/gradelib.php');
                 $gradinginfo = grade_get_grades( $this->get_course()->id, 'mod', 'vpl', $this->get_instance()->id, $userid );
                 foreach ($gradinginfo->items as $gi) {
-                    $this->grade_info = $gi;
+                    $this->gradeinfo = $gi;
                 }
             }
         }
-        return $this->grade_info;
+        return $this->gradeinfo;
     }
 
     /**
@@ -1580,7 +1620,7 @@ class mod_vpl {
      */
     public function print_view_tabs($path) {
         // TODO refactor using functions.
-        global $USER, $DB;
+        global $USER, $DB, $PAGE;
         $active = basename( $path );
         $cmid = $this->cm->id;
         $userid = optional_param( 'userid', null, PARAM_INT );
@@ -1631,12 +1671,22 @@ class mod_vpl {
                 } else {
                     $user = self::get_db_record( 'user', $userid);
                     if ($this->is_group_activity()) {
-                        $text = vpl_get_awesome_icon('group') . ' ';
+                        $text = get_string( 'group' ) . ' ';
+                        $icon = vpl_get_awesome_icon('group') . ' ';
                     } else {
-                        $text = vpl_get_awesome_icon('user') . ' ';
+                        $text = get_string( 'user' ) . ' ';
+                        $icon = vpl_get_awesome_icon('user') . ' ';
                     }
                     $text .= $this->fullname( $user, false );
-                    $maintabs[] = new tabobject( $tabname, $href, $text, $text );
+                    $url = $PAGE->url->out( false, [ 'userid' => $USER->id ] );
+                    // Add button to return to own activity.
+                    // This is a simili-link because it is located inside an <a> tag, and we cannot put an <a> tag within another.
+                    $buttonexit = html_writer::tag('span', vpl_get_awesome_icon('exitrole'), [
+                            'class' => 'btn-link clickable pl-1',
+                            'title' => get_string('returntoownactivity', VPL),
+                            'onclick' => 'event.preventDefault(); window.location.href=\'' . $url . '\';',
+                    ]);
+                    $maintabs[] = new tabobject( $tabname, $href, $icon . $text . $buttonexit, $text );
                 }
             }
         }
@@ -1684,8 +1734,8 @@ class mod_vpl {
                             || $subinstance->grader == $USER->id
                             || $subinstance->grader == 0)) {
                         $href = vpl_mod_href( 'forms/gradesubmission.php', 'id', $cmid, 'userid', $userid );
-                        $text = get_string('gradenoun');
-                        $tabs[] = vpl_create_tabobject( 'gradesubmission.php', $href, 'gradenoun', 'core' );
+                        $text = get_string(vpl_get_gradenoun_str());
+                        $tabs[] = vpl_create_tabobject( 'gradesubmission.php', $href, vpl_get_gradenoun_str(), 'core' );
                     }
                     if ($subinstance && ($grader || $similarity)) {
                         $href = vpl_mod_href( 'views/previoussubmissionslist.php', 'id', $cmid, 'userid', $userid );
@@ -1798,6 +1848,16 @@ class mod_vpl {
     }
 
     /**
+     * Generate HTML fragment for overriden icon.
+     * @return string HTML
+     */
+    public function overriden_icon() {
+        $iconclass = mod_vpl_get_fontawesome_icon_map()['mod_vpl:overrides'];
+        $title = get_string('overriden', VPL);
+        return '<i class="fa ' . $iconclass . ' mx-2" title="' . $title . '" aria-label="' . $title . '"></i>';
+    }
+
+    /**
      * Return vpl submission period.
      * @param int $userid (optional) Show for given user, current user if null.
      * @return string HTML
@@ -1806,11 +1866,19 @@ class mod_vpl {
         $html = '';
         $startdate = $this->get_effective_setting('startdate', $userid);
         if ($startdate) {
-            $html .= $this->str_restriction_with_icon( 'startdate', userdate( $startdate ) );
+            $text = userdate( $startdate );
+            if ($startdate != $this->instance->startdate) {
+                $text .= $this->overriden_icon();
+            }
+            $html .= $this->str_restriction_with_icon( 'startdate', $text );
         }
         $duedate = $this->get_effective_setting('duedate', $userid);
         if ($duedate) {
-            $html .= $this->str_restriction_with_icon( 'duedate', userdate( $duedate ) );
+            $text = userdate( $duedate );
+            if ($duedate != $this->instance->duedate) {
+                $text .= $this->overriden_icon();
+            }
+            $html .= $this->str_restriction_with_icon( 'duedate', $text );
         }
         return $html;
     }
@@ -1902,7 +1970,10 @@ class mod_vpl {
                 $html .= $this->str_restriction_with_icon( 'password', $stryes, false, false, 'moodle');
                 $infohs = new mod_vpl\util\hide_show();
                 $html .= $infohs->generate();
-                $html .= $infohs->content_in_span(s($password));
+                $html .= $infohs->content_in_tag('span', s($password));
+                if ($password != $this->instance->password) {
+                    $html .= $this->overriden_icon();
+                }
                 $html .= "<br>\n";
             }
             if (trim( $instance->requirednet ) > '') {
@@ -1915,7 +1986,7 @@ class mod_vpl {
                 $html .= $this->str_restriction_with_icon('sebkeys', $stryes, false, false);
                 $infohs = new mod_vpl\util\hide_show();
                 $html .= $infohs->generate();
-                $html .= $infohs->content_in_div(nl2br(s($instance->sebkeys)));
+                $html .= $infohs->content_in_tag('div', nl2br(s($instance->sebkeys)));
                 $html .= "<br>\n";
             }
             if ($instance->restrictededitor) {
@@ -2004,11 +2075,17 @@ class mod_vpl {
         $reductionbyevaluation = $this->get_effective_setting('reductionbyevaluation', $userid);
         if ($reductionbyevaluation > 0) {
             $html .= $this->str_restriction( 'reductionbyevaluation', $reductionbyevaluation);
+            if ($reductionbyevaluation != $this->instance->reductionbyevaluation) {
+                $html .= $this->overriden_icon();
+            }
             $freeevaluations = $this->get_effective_setting('freeevaluations', $userid);
             if ( $freeevaluations > 0) {
                 $html .= ' ' . $this->str_restriction( 'freeevaluations', $freeevaluations);
+                if ($freeevaluations != $this->instance->freeevaluations) {
+                    $html .= $this->overriden_icon();
+                }
             }
-            $html .= $html . '<br>';
+            $html .= '<br>';
         }
         return $html;
     }
@@ -2067,7 +2144,7 @@ class mod_vpl {
             $html .= '<br>';
             $html .= vpl_get_awesome_icon('variations');
             $html .= ' <b>' . get_string( 'variations', VPL ) . $div->generate() . '</b><br>';
-            $html .= $div->begin_div();
+            $html .= $div->begin('div');
             if (! $this->instance->usevariations) {
                 $html .= '<b>' . get_string( 'variations_unused', VPL ) . '</b><br>';
             }
@@ -2081,7 +2158,7 @@ class mod_vpl {
                 $html .= $OUTPUT->box( $variation->description );
                 $number ++;
             }
-            $html .= $div->end_div();
+            $html .= $div->end();
         }
         return $html;
     }

@@ -336,6 +336,20 @@ function vpl_mod_href() {
 /**
  * @codeCoverageIgnore
  *
+ * @todo This function is to be remove when Moodle 3.10 be not supported by VPL.
+ * Return 'gradeoun' or 'grade' for backward compatibility.
+ * @return string
+ */
+function vpl_get_gradenoun_str() {
+    if (get_string_manager()->string_exists('gradenoun', 'core')) {
+        return 'gradenoun';
+    }
+    return 'grade';
+}
+
+/**
+ * @codeCoverageIgnore
+ *
  * generate URL relative page with params
  *
  * @param $page string
@@ -497,7 +511,7 @@ function vpl_get_select_time($maximum = null) {
     if ($maximum <= 0) {
         return $ret;
     }
-    $value = 4;
+    $value = 1;
     if ($maximum < $value) {
         $value = $maximum;
     }
@@ -871,6 +885,9 @@ function vpl_truncate_vpl($instance) {
     if (isset($instance->password)) {
         $instance->password = trim($instance->password);
     }
+    if (property_exists($instance, 'jailservers') &&  $instance->jailservers == null) {
+        $instance->jailservers = '';
+    }
     foreach (['name', 'requirednet', 'password', 'variationtitle'] as $field) {
         if (isset($instance->$field)) {
             vpl_truncate_string( $instance->$field, 255 );
@@ -999,125 +1016,43 @@ function vpl_get_picture_fields() {
 
 /**
  * @codeCoverageIgnore
- */
-function vpl_get_webservice_available() {
-    global $DB, $USER, $CFG;
-    if ($USER->id <= 2) {
-        return false;
-    }
-    if (! $CFG->enablewebservices) {
-        return false;
-    }
-    $service = $DB->get_record( 'external_services', [
-            'shortname' => 'mod_vpl_edit',
-            'enabled' => 1,
-    ] );
-    return ! empty( $service );
-}
-
-/**
- * @codeCoverageIgnore
- */
-function vpl_get_webservice_token($vpl) {
-    global $DB, $USER, $CFG;
-    $now = time();
-    if ($USER->id <= 2) {
-        return '';
-    }
-    if (! $CFG->enablewebservices) {
-        return '';
-    }
-    $service = $DB->get_record( 'external_services', [
-            'shortname' => 'mod_vpl_edit',
-            'enabled' => 1,
-    ] );
-    if (empty( $service )) {
-        return '';
-    }
-    $tokenrecord = $DB->get_record( 'external_tokens', [
-            'sid' => session_id(),
-            'userid' => $USER->id,
-            'externalserviceid' => $service->id,
-    ] );
-    if (! empty( $tokenrecord ) && $tokenrecord->validuntil < $now) {
-        unset( $tokenrecord ); // Will be delete before creating a new one.
-    }
-    if (empty( $tokenrecord )) {
-        // Remove old tokens from DB.
-        $select = 'validuntil > 0 AND  validuntil < ?';
-        $DB->delete_records_select( 'external_tokens', $select, [
-                $now,
-        ] );
-        // Generate unique token.
-        for ($i = 0; $i < 100; $i ++) {
-            $token = md5( uniqid( mt_rand(), true ) );
-            $tokenrecord = $DB->get_record( 'external_tokens', [
-                    'token' => $token,
-            ] );
-            if (empty( $tokenrecord )) {
-                break;
-            }
-        }
-        if ($i >= 100) {
-            return '';
-        }
-        $tokenrecord = new stdClass();
-        $tokenrecord->token = $token;
-        $tokenrecord->sid = session_id();
-        $tokenrecord->userid = $USER->id;
-        $tokenrecord->creatorid = $USER->id;
-        $tokenrecord->tokentype = EXTERNAL_TOKEN_EMBEDDED;
-        $tokenrecord->timecreated = $now;
-        $tokenrecord->validuntil = $now + DAYSECS;
-        $tokenrecord->iprestriction = getremoteaddr();
-        $tokenrecord->contextid = $vpl->get_context()->id;
-        $tokenrecord->externalserviceid = $service->id;
-        $DB->insert_record( 'external_tokens', $tokenrecord );
-    }
-    return $tokenrecord->token;
-}
-
-/**
- * @codeCoverageIgnore
- */
-function vpl_get_webservice_urlbase($vpl) {
-    global $CFG;
-    $token = vpl_get_webservice_token( $vpl );
-    if ($token == '') {
-        return '';
-    }
-    return $CFG->wwwroot . '/mod/vpl/webservice.php?moodlewsrestformat=json'
-           . '&wstoken=' . $token . '&id=' . $vpl->get_course_module()->id . '&wsfunction=';
-}
-
-/**
- * @codeCoverageIgnore
- * Agregate usersids and groupsids of array of objects of override assigned records
- * @param array $overridesseparated of objects of records
+ * Return array of override objects for a vpl activity.
+ * Asigned override as agregate userids and groupids.
+ * @param $vplid
  * @return array
  */
-function vpl_agregate_overrides($overridesseparated) {
-    $usersids = [];
+function vpl_get_overrides($vplid) {
+    global $DB;
+    $sql = 'SELECT * FROM {vpl_overrides}
+            WHERE vpl = :vplid
+            ORDER BY id ASC';
+    $overrides = $DB->get_records_sql($sql, ['vplid' => $vplid]);
+
+    $sql = 'SELECT * FROM {vpl_assigned_overrides}
+            WHERE vpl = :vplid';
+    $asignedoverrides = $DB->get_records_sql($sql, ['vplid' => $vplid]);
+
+    $userids = [];
     $groupids = [];
-    foreach ($overridesseparated as $override) {
-        if (!isset($usersids[$override->id])) {
-            $usersids[$override->id] = [];
-            $groupids[$override->id] = [];
-        }
-        if (!empty($override->usersids)) {
-            array_push($usersids[$override->id], $override->usersids);
-        }
-        if (!empty($override->groupids)) {
-            array_push($groupids[$override->id], $override->groupids);
+    foreach ($overrides as $override) {
+        $userids[$override->id] = [];
+        $groupids[$override->id] = [];
+    }
+
+    foreach ($asignedoverrides as $asigned) {
+        $oid = $asigned->override;
+        if (isset($userids[$oid])) { // TODO check consistence for false?
+            if (!empty($asigned->userid)) {
+                $userids[$oid][] = $asigned->userid;
+            }
+            if (!empty($asigned->groupid)) {
+                $groupids[$oid][] = $asigned->groupid;
+            }
         }
     }
-    $overrides = [];
-    foreach ($overridesseparated as $override) {
-        if (!isset($overrides[$override->id])) {
-            $override->usersids = implode(',', $usersids[$override->id]);
-            $override->groupids = implode(',', $groupids[$override->id]);
-            $overrides[$override->id] = $override;
-        }
+    foreach ($overrides as $override) {
+        $override->userids = implode(',', $userids[$override->id]);
+        $override->groupids = implode(',', $groupids[$override->id]);
     }
     return $overrides;
 }
@@ -1174,4 +1109,60 @@ function vpl_call_with_transaction(string $function, array $parms) {
 function vpl_get_scripts_dir() {
     global $CFG;
     return $CFG->dirroot . '/mod/vpl/jail/default_scripts';
+}
+
+/**
+ * Generate HTML fragment representing an "info" icon.
+ *
+ * @return string HTML fragment
+ * @codeCoverageIgnore
+ */
+function vpl_info_icon() {
+    global $OUTPUT;
+    return $OUTPUT->pix_icon('i/info', get_string('info'), 'moodle', [ 'class' => 'text-info' ]);
+}
+
+/**
+ * Generate HTML fragment of a button to copy given text to clipboard.
+ * @param string $text Text to copy to clipboard.
+ *
+ * @return string HTML fragment
+ * @codeCoverageIgnore
+ */
+function vpl_get_copytoclipboard_control($text) {
+    $text = addslashes(str_replace("\r", '', str_replace("\n", '\n', $text)));
+    $strsuccess = addslashes(nl2br(get_string('copytoclipboardsuccess', VPL)));
+    $strfailure = addslashes(nl2br(get_string('copytoclipboarderror', VPL)));
+    $js = "
+        var parentDiv = this.parentNode;
+        var notify = function(message) {
+            var x = document.createElement('span');
+            x.textContent = message;
+            x.classList = 'badge rounded mx-1 align-text-bottom';
+            parentDiv.append(x);
+            setTimeout(() => x.remove(), 1300);
+        };
+        navigator.clipboard.writeText('$text')
+        .then(
+            () => notify('$strsuccess'),
+            () => notify('$strfailure')
+        );";
+    return html_writer::span('<i class="fa fa-clone"></i>', 'clickable btn-link text-decoration-none mx-1',
+            [ 'title' => get_string('copytoclipboard', VPL), 'onclick' => $js ]);
+}
+
+/**
+ * Print some text with a "copy to clipboard" button.
+ * @param string $title A title to put before, will be non-selectable for easier select-copy of the text.
+ * @param string $displayedinfo What will be displayed.
+ * @param string|null $copyinfo Can be different from actual displayed info if provided.
+ *
+ * @codeCoverageIgnore
+ */
+function vpl_print_copyable_info($title, $displayedinfo, $copyinfo = null) {
+    if ($copyinfo === null) {
+        $copyinfo = $displayedinfo;
+    }
+    echo html_writer::div('<span style="user-select:none;">' . $title . ' </span>' .
+            '<b>' . $displayedinfo . '</b>' . vpl_get_copytoclipboard_control($copyinfo));
 }

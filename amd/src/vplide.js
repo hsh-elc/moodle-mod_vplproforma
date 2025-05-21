@@ -22,6 +22,7 @@
  */
 
 /* globals MathJax */
+/* globals Promise */
 
 define(
     [
@@ -127,14 +128,56 @@ define(
                     e.stopImmediatePropagation();
                     return false;
                 }
+                var droppedFiles = [];
+                // Function that lists all files and subfiles of given entry into droppedFiles.
+                var listDroppedFiles = function(entry, path="") {
+                    return new Promise(function(resolve){
+                        if (entry.isFile) {
+                            // Current entry is a file : add it to the list.
+                            entry.file(function(file) {
+                                // Change its name s.t. it preserves directories structure.
+                                var fullName = path + file.name;
+                                Object.defineProperty(file, "name", {
+                                    get: function(){ return fullName; }
+                                });
+                                droppedFiles.push(file);
+                                resolve();
+                            });
+                        } else if (entry.isDirectory) {
+                            // Current entry is a directory : process its content.
+                            var dirReader = entry.createReader();
+                            dirReader.readEntries(function(entries) {
+                                var dirPromises = [];
+                                for (var i=0; i<entries.length; i++) {
+                                    dirPromises.push(listDroppedFiles(entries[i], path + entry.name + "/"));
+                                }
+                                Promise.all(dirPromises).then(resolve);
+                            });
+                        } else {
+                            // This is neither a directory nor a file : ignore it.
+                            resolve();
+                        }
+                    });
+                };
                 var dt = e.originalEvent.dataTransfer;
+
+                // List every element of the drop event.
+                var promises = [];
+                for (var i=0; i<dt.items.length; i++) {
+                    promises.push(listDroppedFiles(dt.items[i].webkitGetAsEntry()));
+                }
+
                 // Drop files.
                 if (dt.files.length > 0) {
-                    VPLUI.readSelectedFiles(dt.files, function(file) {
-                        return fileManager.addFile(file, true, updateMenu, showErrorMessage);
-                    },
-                    function() {
-                        fileManager.fileListVisibleIfNeeded();
+                    Promise.all(promises)
+                    .then(function(){
+                        VPLUI.readSelectedFiles(droppedFiles, function(file) {
+                            return fileManager.addFile(file, true, updateMenu, showErrorMessage);
+                        },
+                        function(){
+                            fileManager.fileListVisibleIfNeeded();
+                        });
+                        return;
                     });
                     e.stopImmediatePropagation();
                     return false;
@@ -1030,8 +1073,8 @@ define(
             function resizeHeight() {
                 var newHeight = $(window).outerHeight();
                 newHeight -= menu.offset().top + menu.height() + (fullScreen ? getTabsAir() : 20);
-                if (newHeight < 150) {
-                    newHeight = 150;
+                if (newHeight < 250) {
+                    newHeight = 250;
                 }
                 tr.height(newHeight);
                 var panelHeight = newHeight - 3 * getTabsAir();
@@ -1704,13 +1747,14 @@ define(
                     });
                 }
             });
+            var noconfirmation = false;
             menuButtons.add({
                 name: 'save',
                 originalAction: function() {
                     var data = {
                         files: fileManager.getFilesToSave(),
                         comments: $('#vpl_ide_input_comments').val(),
-                        version: fileManager.getVersion()
+                        version: noconfirmation ? -1 : fileManager.getVersion()
                     };
                     if (JSON.stringify(data).length > options.postMaxSize) {
                         showErrorMessage(str('maxpostsizeexceeded'));
@@ -1722,15 +1766,24 @@ define(
                     function doSave() {
                         VPLUI.requestAction('save', 'saving', data, options.ajaxurl)
                         .done(function(response) {
-                            if (response.requestsconfirmation) {
-                                showMessage(response.question, {
+                            if (response.requestsconfirmation && !noconfirmation) {
+                                var checkboxID = 'vpl_donotshowagain';
+                                var donotshowagain = '<input type="checkbox" id="' + checkboxID +'"'
+                                                    + ' class="align-text-bottom mr-1 mt-3">'
+                                                    + '<label for="' + checkboxID + '">' + str('donotshowagain') + '</label>';
+                                var $checkbox;
+                                showMessage(response.question + '<br>' + donotshowagain, {
                                     title: str('saving'),
                                     icon: 'alert',
                                     yes: function() {
+                                        if ($checkbox.length == 1 && $checkbox.prop('checked')) {
+                                            noconfirmation = true;
+                                        }
                                         data.version = 0;
                                         doSave();
                                     }
                                 });
+                                $checkbox = $('#' + checkboxID);
                             } else {
                                 fileManager.resetModified();
                                 fileManager.setVersion(response.version);
@@ -2024,8 +2077,8 @@ define(
                 'setResult': self.setResult,
                 'ajaxurl': options.ajaxurl,
                 'run': function(content, coninfo, ws) {
-                    var parsed = /^([^:]*):?(.*)/i.exec(content);
-                    var type = parsed[1];
+                    var parsed = /^([^:]*):?(.*)/.exec(content);
+                    var type = VPLUtil.sanitizeText(parsed[1]);
                     if (type == 'terminal' || type == 'webterminal') {
                         if (lastConsole && lastConsole.isOpen()) {
                             lastConsole.close();
@@ -2055,7 +2108,7 @@ define(
                                 });
                     } else if (type == "browser") {
                         var URL = (coninfo.secure ? "https" : "http") + "://" + coninfo.server + ":" + coninfo.portToUse + "/";
-                        URL += parsed[2] + "/httpPassthrough";
+                        URL += VPLUtil.sanitizeText(parsed[2]) + "/httpPassthrough";
                         if (isTeacher) {
                             URL += "?private";
                         }

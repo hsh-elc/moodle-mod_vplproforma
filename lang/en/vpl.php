@@ -34,12 +34,16 @@ $string['attemptnumber'] = 'Attempt number {$a}';
 $string['autodetect'] = 'Autodetect';
 $string['automaticevaluation'] = 'Automatic evaluation';
 $string['automaticgrading'] = 'Automatic grade';
+$string['automaticgrading_help'] = 'If set to Yes, the grade proposed by the automatic evaluation will be applied as the grade for this activity.<br>
+If set to No, no grade will be applied by this activity; teachers will have to review proposed grades in order to apply them manually.';
 $string['averageperiods'] = 'Average periods {$a}';
 $string['averagetime'] = 'Average time {$a}';
 $string['basedon'] = 'Based on';
 $string['basedon_missed'] = 'The based-on activity was missed by restoring/importing. Please, include "{$a}"';
 $string['basedon_chain_broken'] = 'Error: The chain of based-on activities is broken. Please, review based-on activities.';
 $string['basedon_deleted'] = 'Error: The based-on activity missed (was deleted?). Please, set the based-on activity.';
+$string['basedon_help'] = 'This option describes a system of inheritance for execution scripts.<br>
+Execution scripts will be concatenated, first the parent (the base), then the child (this VPL). Several bases can be chained, resulting in multiple concatenations.';
 $string['basic'] = 'Basic';
 $string['binaryfile'] = 'Binary File';
 $string['breakpoint'] = 'Breakpoint';
@@ -49,6 +53,10 @@ $string['calendardue'] = 'VPL submission is due';
 $string['calendarexpectedon'] = 'VPL submission expected';
 $string['changesNotSaved'] = 'Changes have not been saved';
 $string['check_jail_servers'] = 'Check execution servers';
+$string['checkforcourse'] = 'Check for course {$a}';
+$string['checkgroups'] = 'Check groups consistency';
+$string['checksitewide'] = 'Check sitewide';
+$string['clicktoshow'] = 'Click to show';
 $string['clipboard'] = 'Clipboard';
 $string['closed'] = 'Closed';
 $string['comments'] = 'Comments';
@@ -60,8 +68,13 @@ $string['connection_closed'] = 'connection closed';
 $string['connection_fail'] = 'connection fail';
 $string['console'] = 'Console';
 $string['copy'] = 'Copy';
+$string['copytoclipboard'] = 'Copy to clipboard';
+$string['copytoclipboarderror'] = 'Failed to copy to clipboard.';
+$string['copytoclipboardsuccess'] = 'Copied!';
 $string['create_new_file'] = 'Create a new file';
-$string['crontask'] = 'Background processing for Virtual Programming Lab module';
+$string['crontask_check_vpljs'] = 'Report VPL Jail Servers';
+$string['messageprovider:bad_jailservers'] = 'Report VPL Jail Servers';
+$string['crontask'] = 'VPL background processing';
 $string['currentstatus'] = 'Current status';
 $string['cut'] = 'Cut';
 $string['datesubmitted'] = 'Date submitted';
@@ -85,6 +98,7 @@ $string['directory_not_renamed'] = 'Directory \'{$a}\' has not been renamed';
 $string['disabled'] = 'Disabled';
 $string['discard_submission_period'] = 'Discard submission period';
 $string['discard_submission_period_description'] = 'For each student and assignment, the system tries to discard submissions. The system keep the last one and at least a submission for every period';
+$string['donotshowagain'] = 'Disable these messages for the current page';
 $string['download'] = 'Download';
 $string['downloadallsubmissions'] = 'Download all submissions';
 $string['downloadsubmissions'] = 'Download submissions';
@@ -102,7 +116,8 @@ $string['error:recursivedefinition'] = "Recursive basedon VPL definition";
 $string['error:uninstalling'] = 'Error uninstalling VPL. All data may have not been deleted';
 $string['error:zipnotfound'] = 'ZIP file not found';
 $string['evaluate'] = 'Evaluate';
-$string['evaluateonsubmission'] = 'Evaluate just on submission';
+$string['evaluateonsubmission'] = 'Evaluate upon files submission';
+$string['evaluateonsubmission_help'] = 'If set to Yes, performs an evaluation upon files submission via the "Submission" tab. This does not affect submissions via the "Edit" tab.';
 $string['evaluating'] = 'Evaluating';
 $string['evaluation'] = 'Evaluation';
 $string['examples'] = 'Examples';
@@ -156,6 +171,7 @@ $string['indicator:cognitivedepth_help'] = 'This indicator is based on the cogni
 $string['indicator:socialbreadth'] = 'VPL social';
 $string['indicator:socialbreadth_help'] = 'This indicator is based on the social breadth reached by the student in an VPL activity.';
 $string['individualwork'] = 'Individual work';
+$string['inherit'] = 'Inherit';
 $string['instanceselection'] = 'VPL selection';
 $string['isexample'] = 'This activity acts as example';
 $string['jail_servers'] = 'Execution servers list';
@@ -221,6 +237,7 @@ $string['outofmemory'] = 'Out of memory';
 $string['override'] = 'Override';
 $string['overridefor'] = '{$a->base} is due for {$a->for}';
 $string['overrideforgroup'] = '{$a->base} is due for members of {$a->for}';
+$string['overriden'] = 'Overriden';
 $string['overrides'] = 'Overrides';
 $string['override_options'] = 'Override options';
 $string['override_users'] = 'Affected users';
@@ -284,13 +301,15 @@ $string['rename_directory'] = 'Rename directory';
 $string['replace_find'] = 'Replace/Find';
 $string['replacenewer'] = "A newer version was already saved.\nDo you want to replace the newer version with this one?";
 $string['requestedfiles'] = 'Requested files';
-$string['requirednet'] = 'Allowed submission from net';
+$string['requirednet'] = 'Require network address';
+$string['requirednet_help'] = 'VPL access may be restricted to particular subnets on the LAN or Internet by specifying a comma-separated list of partial or full IP address numbers. This can be useful to ensure that only people in a certain location can access the VPL.';
 $string['requiredpassword'] = 'A password is required';
 $string['resetfiles'] = 'Reset files';
 $string['resetvpl'] = 'Reset {$a}';
 $string['resourcelimits'] = 'Resources limits';
 $string['restrictededitor'] = 'Disable external file upload, paste and drop external content';
 $string['retrieve'] = 'Retrieve results';
+$string['returntoownactivity'] = 'Return to own activity';
 $string['run'] = 'Run';
 $string['running'] = 'Running';
 $string['runscript'] = 'Run script';
@@ -377,6 +396,18 @@ $string['vpl_debug.sh'] = 'This script prepares the debugging';
 $string['vpl_evaluate.cases'] = 'Test cases for evaluation';
 $string['vpl_evaluate.sh'] = 'This script prepares the evaluation';
 $string['vpl_run.sh'] = 'This script prepares the execution';
+$string['webservice'] = 'Webservice';
+$string['webservice_help'] = 'This webservice can be used to retrieve and submit files for VPL activities.';
+$string['webserviceglobal'] = 'Global VPL webservice';
+$string['webserviceglobal_help'] = 'The following personal token is permanent and can be used for any VPL across the platform, using the given webservice URL.';
+$string['webservicelocal'] = 'Local VPL webservice';
+$string['webservicelocal_help'] = 'The following personal token can only be used for this VPL. It is temporary, and will most likely be reset in the next 24 hours or upon session closing.';
+$string['webserviceloginasnotice'] = 'You are logged in as another user. Their personal token with global access will not be displayed.';
+$string['webservicetoken'] = 'Personal token:';
+$string['webserviceurl'] = 'Webservice URL:';
+$string['webserviceurlfull'] = 'Full URL:';
+$string['webserviceurlpwdnotice'] = 'This VPL is protected by a password that is not given for security reasons. It should be added to the given URL as a parameter named "password".';
+$string['webservicevplid'] = 'VPL ID:';
 $string['workingperiods'] = 'Working periods';
 $string['worktype'] = 'Type of work';
 $string['websocket_protocol'] = 'WebSocket protocol';
@@ -402,7 +433,20 @@ $string['stop'] = 'Stop';
 $string['pause'] = 'Pause';
 $string['resume'] = 'Resume';
 $string['step'] = 'Step';
+$string['message::subject_bad_jailservers'] = 'Important Report of the VPL Plugin in Moodle on the \'{$a}\' Server';
+$string['message::body_header_bad_jailservers'] = '
+The VPL Jail servers in the following list
+**urgently** need to update the VPL-Jail-System software:';
+$string['message::body_footer_bad_jailservers'] = '
+To download the latest version of the VPL-Jail-System,
+visit the VPL for Moodle home page and navigate to the "Download" section.
+Remember to use the parameters URLPATH and/or TASK_ONLY_FROM
+to enhance your security settings as recommended.
 
+To locate activities using local VPL Jail servers,
+search in the field jailservers of the table {prefix}vpl.
+';
+$string['message::bad_jailserver'] = 'Not used due server software update required. Contact your system administrator';
 $string['check_jail_servers_help'] = "<p>This page check and show the status of execution servers used
 for this activity.</p>";
 $string['executionfiles_help'] = '<p>Here you set the files that are needed to prepare the execution,

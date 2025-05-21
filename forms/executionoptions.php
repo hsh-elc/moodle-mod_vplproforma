@@ -94,6 +94,7 @@ class mod_vpl_executionoptions_form extends moodleform {
         $basedonlist[0] = get_string( 'select' );
         $mform->addElement( 'select', 'basedon', $strbasedon, $basedonlist );
         $mform->setDefault( 'basedon', $instance->basedon );
+        $mform->addHelpButton( 'basedon', 'basedon', VPL );
 
         $strautodetect = get_string('autodetect', VPL);
         $strrunscript = get_string('runscript', VPL);
@@ -117,9 +118,11 @@ class mod_vpl_executionoptions_form extends moodleform {
         $mform->addElement( 'selectyesno', 'evaluateonsubmission', get_string( 'evaluateonsubmission', VPL ) );
         $mform->setDefault( 'evaluateonsubmission', $instance->evaluateonsubmission );
         $mform->disabledIf( 'evaluateonsubmission', 'evaluate', 'eq', 0 );
+        $mform->addHelpButton( 'evaluateonsubmission', 'evaluateonsubmission', VPL );
         $mform->addElement( 'selectyesno', 'automaticgrading', get_string( 'automaticgrading', VPL ) );
         $mform->setDefault( 'automaticgrading', $instance->automaticgrading );
         $mform->disabledIf( 'automaticgrading', 'evaluate', 'eq', 0 );
+        $mform->addHelpButton( 'automaticgrading', 'automaticgrading', VPL );
 
         $url = new moodle_url('/mod/vpl/forms/proforma_submission.php', [ 'id' => $id ]);
         $link = html_writer::link($url, 'link to proforma submission settings page');
