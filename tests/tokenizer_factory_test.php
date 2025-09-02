@@ -27,7 +27,7 @@ namespace mod_vpl;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->dirroot . '/mod/vpl/tests/base_test.php');
+require_once($CFG->dirroot . '/mod/vpl/tests/base_fixture.php');
 require_once($CFG->dirroot . '/mod/vpl/similarity/tokenizer_factory.class.php');
 
 use Exception;
@@ -46,7 +46,7 @@ use vpl_tokenizer_factory;
  * @group mod_vpl_tokenizer_factory
  * @covers \mod_vpl\tokenizer\tokenizer_factory
  */
-class tokenizer_factory_test extends \advanced_testcase {
+final class tokenizer_factory_test extends \advanced_testcase {
     /**
      * Method to test tokenizer_factory::get when tokenizer is not valid
      */
@@ -99,6 +99,13 @@ class tokenizer_factory_test extends \advanced_testcase {
         }
     }
 
+    /**
+     * Method to check if the tokenizer is valid
+     *
+     * @param object $tokenizer The tokenizer object to check
+     * @param string $namelang The name of the language for the tokenizer
+     * @param bool $newtokenizer If true, checks for new tokenizer class
+     */
     private function check_tokenizer($tokenizer, $namelang, $newtokenizer=false) {
         $this->assertTrue(isset($tokenizer) === true);
         $classname = $newtokenizer === false ? 'vpl_tokenizer_' . $namelang : 'mod_vpl\tokenizer\tokenizer';

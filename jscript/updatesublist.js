@@ -28,55 +28,122 @@
         VPL = {};
     }
     /**
-     * Highlight row
+     * Returns opener or current window.
+     * @returns {Window} opener or current window
+     */
+    function getWindow() {
+        if (opener === null) {
+            return window;
+        } else {
+            return opener;
+        }
+    }
+    /**
+     * Get the tag type element ancestor of a node
+     * @param {Node} node Node to get tr ancestor
+     * @returns {Node} td element
+     */
+    function getAncestor(node, typeName) {
+        while (node && node.tagName != typeName) {
+            node = node.parentNode;
+        }
+        return node;
+    }
+
+    /**
+     * Get the tr element ancstro of a node
+     * @param {Node} node Node to get tr ancestor
+     * @returns {Node} tr element
+     */
+    function getTr(node) {
+        return getAncestor(node, 'TR');
+    }
+    /**
+     * Get the td element ancestor of a node
+     * @param {Node} node Node to get td ancestor
+     * @returns {Node} td element
+     */
+    function getTd(node) {
+        return getAncestor(node, 'TD');
+    }
+    /**
+     * Get nodes to highlight
      * @param {number} subid submission identification
      */
-    VPL.hlrow = function(subid) {
-        if (opener === null) {
-            return;
-        }
+    function getNodes(subid) {
+        var win = getWindow();
         var ssubid = "" + subid;
-        var divgrade = opener.document.getElementById('g' + ssubid);
-        var divgrader = opener.document.getElementById('m' + ssubid);
-        var divgradeon = opener.document.getElementById('o' + ssubid);
-        if (divgrade) {
-            divgrade.style.backgroundColor = 'yellow';
-            divgrade.style.color = 'black';
+        var tdgrade = getTd(win.document.getElementById('g' + ssubid));
+        var tdgrader = getTd(win.document.getElementById('m' + ssubid));
+        var tdgradeon = getTd(win.document.getElementById('o' + ssubid));
+        return [tdgrade, tdgrader, tdgradeon];
+    }
+    /**
+     * Get table row node
+     * @param {number} subid submission identification
+     * @returns {Node} tr element
+     */
+    VPL.getTableRow = function(subid) {
+        var win = getWindow();
+        var ssubid = "" + subid;
+        return getTr(win.document.getElementById('g' + ssubid));
+    };
+    /**
+     * Hide all table rows
+     * @param {number} subid submission identification
+     */
+    VPL.hideTableRows = function(subid) {
+        var win = getWindow();
+        var ssubid = "" + subid;
+        var table = getAncestor(win.document.getElementById('g' + ssubid), 'TABLE');
+        var list = table.querySelectorAll('tr');
+        for (let i = 1; i < list.length; i++) {
+            list[i].classList.add('vpl_hidden_evaluation_row');
         }
-        if (divgrader) {
-            divgrader.style.backgroundColor = 'yellow';
-            divgrader.style.color = 'black';
+    };
+    /**
+     * Show table row
+     * @param {number} subid submission identification
+     */
+    VPL.showTableRow = function(subid) {
+        var row = VPL.getTableRow(subid);
+        if (row) {
+            row.classList.remove('vpl_hidden_evaluation_row');
         }
-        if (divgradeon) {
-            divgradeon.style.backgroundColor = 'yellow';
-            divgradeon.style.color = 'black';
+    };
+    /**
+     * Highlight table elements evaluating
+     * @param {number} subid submission identification
+     * @param {string} cssClass css class to add default vpl_hl_evaluation_row
+     */
+    VPL.hlrow = function(subid, cssClass) {
+        if (typeof cssClass === 'undefined') {
+            cssClass = 'vpl_hl_evaluation_row';
+        }
+        var nodes = getNodes(subid);
+        var node;
+        for (node of nodes) {
+            if (node) {
+                node.classList.add(cssClass);
+            }
+        }
+        if (node) {
+            node.scrollIntoView({block: 'nearest', behavior: 'smooth'});
         }
     };
 
     /**
-     * Unhighlight row
+     * Unhighlight elements highlighted with hlrow
      * @param {number} subid submission identification
     */
     VPL.unhlrow = function(subid) {
-        if (opener === null) {
-            return;
+        var nodes = getNodes(subid);
+        for (let node of nodes) {
+            if (node) {
+                node.classList.remove('vpl_hl_evaluation_row');
+            }
         }
-        var ssubid = "" + subid;
-        var divgrade = opener.document.getElementById('g' + ssubid);
-        var divgrader = opener.document.getElementById('m' + ssubid);
-        var divgradeon = opener.document.getElementById('o' + ssubid);
-        if (divgrade) {
-            divgrade.style.backgroundColor = '';
-            divgrade.style.color = '';
-        }
-        if (divgrader) {
-            divgrader.style.backgroundColor = '';
-            divgrader.style.color = '';
-        }
-        if (divgradeon) {
-            divgradeon.style.backgroundColor = '';
-            divgradeon.style.color = '';
-        }
+        VPL.hlrow(subid, 'vpl_finished_evaluation_row');
     };
 
     /**
@@ -87,27 +154,20 @@
      * @param {string} gradeon Grade date
     */
     VPL.updatesublist = function(subid, grade, grader, gradeon) {
-        if (opener === null) {
-            return;
-        }
+        var win = getWindow();
+        VPL.unhlrow(subid);
         var ssubid = "" + subid;
-        var divgrade = opener.document.getElementById('g' + ssubid);
-        var divgrader = opener.document.getElementById('m' + ssubid);
-        var divgradeon = opener.document.getElementById('o' + ssubid);
-        if (divgrade) {
-            divgrade.innerHTML = grade;
-            divgrade.style.backgroundColor = '';
-            divgrade.style.color = '';
+        var tdgrade = win.document.getElementById('g' + ssubid);
+        var tdgrader = win.document.getElementById('m' + ssubid);
+        var tdgradeon = win.document.getElementById('o' + ssubid);
+        if (tdgrade && typeof grade != 'undefined') {
+            tdgrade.innerHTML = grade;
         }
-        if (divgrader) {
-            divgrader.innerHTML = grader;
-            divgrader.style.backgroundColor = '';
-            divgrader.style.color = '';
+        if (tdgrader && typeof grader != 'undefined') {
+            tdgrader.innerHTML = grader;
         }
-        if (divgradeon) {
-            divgradeon.innerHTML = gradeon;
-            divgradeon.style.backgroundColor = '';
-            divgradeon.style.color = '';
+        if (tdgradeon && typeof gradeon != 'undefined') {
+            tdgradeon.innerHTML = gradeon;
         }
     };
 

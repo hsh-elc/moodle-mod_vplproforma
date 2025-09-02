@@ -15,7 +15,9 @@
 // along with VPL.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package   VPL. Show a VPL instance
+ * View a VPL instance
+ *
+ * @package mod_vpl
  * @copyright 2012 onwards Juan Carlos Rodríguez-del-Pino
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author    Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
@@ -77,7 +79,7 @@ $vpl->print_view_tabs( basename( __FILE__ ) );
 $vpl->print_name();
 
 echo $OUTPUT->box_start();
-
+$vpl->print_submissions_status();
 $vpl->print_submission_period( $userid );
 $vpl->print_submission_restriction( $userid );
 $vpl->print_variation( $userid );

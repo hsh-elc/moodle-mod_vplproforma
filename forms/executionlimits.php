@@ -29,12 +29,32 @@ require_once(dirname(__FILE__).'/../vpl.class.php');
 global $CFG;
 require_once($CFG->libdir.'/formslib.php');
 
+/**
+ * Class to define the form for setting execution limits in VPL
+ *
+ * This form allows users to set execution limits such as time, memory, file size,
+ * and process limits for a VPL instance.
+ */
 class mod_vpl_executionlimits_form extends moodleform {
+    /**
+     * @var mod_vpl $vpl The VPL instance for which execution limits are being set.
+     */
     protected $vpl;
+
+    /**
+     * Constructor for the execution limits form.
+     *
+     * @param moodle_page $page The page on which the form will be displayed.
+     * @param mod_vpl $vpl The VPL instance for which execution limits are being set.
+     */
     public function __construct($page, $vpl) {
         $this->vpl = $vpl;
         parent::__construct( $page );
     }
+
+    /**
+     * Defines the form elements for setting execution limits.
+     */
     protected function definition() {
         $plugincfg = get_config('mod_vpl');
         $mform = & $this->_form;
@@ -50,13 +70,10 @@ class mod_vpl_executionlimits_form extends moodleform {
                 'exefilesize' => vpl_get_select_sizes( 1024 * 256, ( int ) $plugincfg->maxexefilesize ),
         ];
         foreach ($settings as $name => $options) {
-            $inheritedlimit = $instance->basedon ? self::get_closest_set_execution_limit($instance->basedon, 'max' . $name) : 0;
-            $defaultvaluestring = trim($options[ vpl_get_array_key($options, $inheritedlimit ?: $plugincfg->{'default' . $name}) ]);
-            if ($inheritedlimit) {
-                $defaultvaluestring = get_string('inherit', VPL) . ' (' . $defaultvaluestring . ')';
-            } else {
-                $defaultvaluestring = get_string('default') . ' (' . $defaultvaluestring . ')';
-            }
+            $inheritedlimit = $this->vpl->get_closest_set_field_in_base_chain('max' . $name, 0);
+            $defaultvaluestring = trim($options[vpl_get_array_key($options, $inheritedlimit ?: $plugincfg->{'default' . $name})]);
+            $strname = $inheritedlimit ? 'inheritvalue' : 'defaultvalue';
+            $defaultvaluestring = get_string($strname, VPL, $defaultvaluestring);
             self::add_resource_limit_select($mform, 'max' . $name, get_string( 'max' . $name, VPL ),
                     $options, $defaultvaluestring, $instance->{'max' . $name});
         }
@@ -66,6 +83,11 @@ class mod_vpl_executionlimits_form extends moodleform {
         if ($instance->maxexeprocesses) {
             $mform->setDefault( 'maxexeprocesses', $instance->maxexeprocesses );
         }
+        $inheritedmax = $this->vpl->get_closest_set_field_in_base_chain('maxexeprocesses', 0);
+        $strname = $inheritedmax ? 'inheritvalue' : 'defaultvalue';
+        $defaultvalue = $inheritedmax ? $inheritedmax : $plugincfg->defaultexeprocesses;
+        $mform->addElement( 'static', 'maxexeprocesses_default', '', get_string( $strname, VPL, $defaultvalue ) );
+
         $mform->addElement( 'submit', 'savelimitoptions', get_string( 'saveoptions', VPL ) );
     }
 
@@ -76,7 +98,7 @@ class mod_vpl_executionlimits_form extends moodleform {
      * @param string $label The label of the element.
      * @param array $selectoptions The selectable options of the element.
      *  The [0] => 'select' option will be replaced by a localized string describing the default value.
-     * @param int $defaultvalue The default value to use when no other value is selected.
+     * @param int $defaultvaluestring The default value to use when no other value is selected.
      * @param int $currentvalue The value to which the element should be set when displaying the form.
      */
     private static function add_resource_limit_select($mform, $name, $label, $selectoptions, $defaultvaluestring, $currentvalue) {
@@ -88,22 +110,6 @@ class mod_vpl_executionlimits_form extends moodleform {
         }
     }
 
-    /**
-     * Retrieve the first non-empty setting in the basedon chain.
-     * @param number $instanceid ID in 'vpl' table
-     * @param string $field Setting name (DB column name)
-     */
-    private static function get_closest_set_execution_limit($instanceid, $field) {
-        global $DB;
-        $vplinstance = $DB->get_record('vpl', [ 'id' => $instanceid ]);
-        if ($vplinstance->{$field}) {
-            return $vplinstance->{$field};
-        } else if ($vplinstance->basedon) {
-            return self::get_closest_set_execution_limit($vplinstance->basedon, $field);
-        } else {
-            return 0;
-        }
-    }
 }
 
 require_login();

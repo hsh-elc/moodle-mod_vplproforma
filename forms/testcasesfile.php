@@ -22,6 +22,7 @@
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
+
 require_once(dirname(__FILE__).'/../../../config.php');
 require_once(dirname(__FILE__).'/../locallib.php');
 require_once(dirname(__FILE__).'/../vpl.class.php');
@@ -47,6 +48,8 @@ $options['evaluate'] = false;
 $options['ajaxurl'] = "testcasesfile.json.php?id={$id}&action=";
 $options['download'] = "../views/downloadexecutionfiles.php?id={$id}";
 $options['resetfiles'] = false;
+$options['showparentfiles'] = false;
+$options['showparentfilesurl'] = null;
 $options['minfiles'] = 1;
 $options['maxfiles'] = 1;
 $options['saved'] = true;

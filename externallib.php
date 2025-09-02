@@ -15,16 +15,15 @@
 // along with VPL for Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
+ * Web service API for VPL activities.
+ *
  * @package mod_vpl
  * @copyright 2014 Juan Carlos Rodríguez-del-Pino
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
 
-// TODO Organize security checks.
-
 defined( 'MOODLE_INTERNAL' ) || die();
-
 
 require_once(dirname( __FILE__ ) . '/../../lib/externallib.php');
 require_once(dirname( __FILE__ ) . '/locallib.php');
@@ -32,6 +31,7 @@ require_once(dirname( __FILE__ ) . '/forms/edit.class.php');
 require_once(dirname( __FILE__ ) . '/vpl_submission.class.php');
 
 /**
+ * Class that provide the Web service API for VPL activities.
  * @codeCoverageIgnore
  */
 class mod_vpl_webservice extends external_api {
@@ -45,10 +45,10 @@ class mod_vpl_webservice extends external_api {
     protected static function rewrite_pluginfile_for_external($text, $contextid) {
         // First, re-encode urls into @@PLUGINFILE@@ tokens.
         $reencoded = file_rewrite_pluginfile_urls($text, 'pluginfile.php', $contextid,
-                'mod_vpl', 'intro', null, array('reverse' => true));
+                'mod_vpl', 'intro', null, ['reverse' => true]);
         // Then, re-decode these @@PLUGINFILE@@ tokens into the tokenpluginfile form.
         return file_rewrite_pluginfile_urls($reencoded, 'pluginfile.php', $contextid,
-                'mod_vpl', 'intro', null, array('includetoken' => true));
+                'mod_vpl', 'intro', null, ['includetoken' => true]);
     }
 
     /**
@@ -56,8 +56,9 @@ class mod_vpl_webservice extends external_api {
      * Does checks fro required netwok and password if setted.
      *
      * @param int $id The coursemodule id.
-     * @param string $pssword The password for using the VPL activity.
+     * @param string $password The password for using the VPL activity.
      * @return \mod_vpl object or throws exception if not available.
+     * @throws Exception if not available or not allowed.
      */
     private static function initial_checks($id, $password) {
         $vpl = new mod_vpl( $id );
@@ -77,7 +78,7 @@ class mod_vpl_webservice extends external_api {
      * Encode file format from array if key = value (filename => data),
      * to an array of arrays with 'name', 'data' and 'enconding' for each file.
      *
-     * @param array $files of (filename => data).
+     * @param array $oldfiles of (filename => data).
      * @return array of array with 'name', 'data' and 'conding' keys.
      */
     private static function encode_files(&$oldfiles) {
@@ -96,11 +97,12 @@ class mod_vpl_webservice extends external_api {
         }
         return $files;
     }
+
     /**
      * Revert encode_files action.
      *
-     * @param array of array with 'name', 'data' and 'conding' keys.
-     * @return array $files of (filename => data).
+     * @param array $oldfiles of array with 'name', 'data' and 'conding' keys.
+     * @return array files of (filename => data).
      */
     private static function decode_files(&$oldfiles) {
         $files = [];
@@ -115,8 +117,9 @@ class mod_vpl_webservice extends external_api {
         }
         return $files;
     }
-    /*
-     * info function. return information of the activity
+
+    /**
+     * Return the parameters that must be used in the info function
      */
     public static function info_parameters() {
         return new external_function_parameters( [
@@ -124,6 +127,16 @@ class mod_vpl_webservice extends external_api {
                 'password' => new external_value( PARAM_RAW, 'Activity password', VALUE_DEFAULT, '' ),
         ], 'Parameters', VALUE_REQUIRED);
     }
+
+    /**
+     * Returns information about the VPL activity.
+     *
+     * @param int $id The coursemodule id.
+     * @param string $password The password for using the VPL activity.
+     * @return array with 'name', 'shortdescription', 'intro', 'introformat', 'reqpassword',
+     * 'example', 'restrictededitor', 'maxfiles' and 'reqfiles' keys.
+     * @throws Exception if not available or not allowed.
+     */
     public static function info($id, $password) {
         self::validate_parameters( self::info_parameters(), [
                 'id' => $id,
@@ -154,6 +167,12 @@ class mod_vpl_webservice extends external_api {
         $ret['reqfiles'] = $files;
         return $ret;
     }
+
+    /**
+     * Returns the structure of the info function.
+     *
+     * @return external_single_structure
+     */
     public static function info_returns() {
         return new external_single_structure( [
                 'name' => new external_value( PARAM_TEXT, 'Name', VALUE_REQUIRED),
@@ -172,8 +191,8 @@ class mod_vpl_webservice extends external_api {
                 ], 'Parameters', VALUE_REQUIRED);
     }
 
-    /*
-     * save function. save/submit the students files
+    /**
+     * Returns the parameters that must be used in save function.
      */
     public static function save_parameters() {
         $descuserid = 'User ID to use (required mod/vpl:manage capability)';
@@ -189,6 +208,17 @@ class mod_vpl_webservice extends external_api {
                 'comments' => new external_value( PARAM_RAW, 'Student\'s comments', VALUE_DEFAULT, '' ),
         ], 'Parameters', VALUE_REQUIRED );
     }
+
+    /**
+     * Save the student's submitted files.
+     *
+     * @param int $id The coursemodule id.
+     * @param array $files The files to save, array of (filename => data).
+     * @param string $password The password for using the VPL activity.
+     * @param int $userid The user id to use, -1 for current user.
+     * @param string $comments Student's comments.
+     * @throws Exception if not available or not allowed.
+     */
     public static function save($id, $files=[], $password='', $userid=-1, $comments='') {
         global $USER;
         self::validate_parameters( self::save_parameters(), [
@@ -218,12 +248,17 @@ class mod_vpl_webservice extends external_api {
         mod_vpl_edit::save($vpl, $userid, $files, $comments);
     }
 
+    /**
+     * Returns the structure that the save function returns.
+     *
+     * @return external_single_structure
+     */
     public static function save_returns() {
         return null;
     }
 
-    /*
-     * open function. return the student's submitted files
+    /**
+     * Returns the parameters that must be used in open.
      */
     public static function open_parameters() {
         $descuserid = 'User ID to use (required mod/vpl:grade capability)';
@@ -233,6 +268,15 @@ class mod_vpl_webservice extends external_api {
                 'userid' => new external_value( PARAM_INT, $descuserid, VALUE_DEFAULT, -1 ),
         ], 'Parameters', VALUE_REQUIRED );
     }
+
+    /**
+     * Returns the student's submitted files.
+     *
+     * @param int $id The coursemodule id.
+     * @param string $password The password for using the VPL activity.
+     * @param int $userid The user id to use, -1 for current user.
+     * @return array with 'files', 'comments', 'compilation', 'evaluation' and 'grade' keys.
+     */
     public static function open($id, $password = '', $userid = -1) {
         global $USER;
         self::validate_parameters( self::open_parameters(), [
@@ -271,6 +315,12 @@ class mod_vpl_webservice extends external_api {
         }
         return $ret;
     }
+
+    /**
+     * Returns the structure of that the open function returns.
+     *
+     * @return external_single_structure
+     */
     public static function open_returns() {
         return new external_single_structure( [
                 'files' => new external_multiple_structure( new external_single_structure( [
@@ -285,8 +335,8 @@ class mod_vpl_webservice extends external_api {
         ], 'Parameters', VALUE_REQUIRED );
     }
 
-    /*
-     * evaluate function. evaluate the student's submitted files
+    /**
+     * Returns the parameters that must be used in evaluate.
      */
     public static function evaluate_parameters() {
         $descuserid = 'User ID to use (required mod/vpl:grade capability)';
@@ -296,6 +346,15 @@ class mod_vpl_webservice extends external_api {
                 'userid' => new external_value( PARAM_INT, $descuserid , VALUE_DEFAULT, -1 ),
         ], 'Parameters', VALUE_REQUIRED );
     }
+
+    /**
+     * Evaluate the student's submitted files.
+     *
+     * @param int $id The coursemodule id.
+     * @param string $password The password for using the VPL activity.
+     * @param int $userid The user id to use, -1 for current user.
+     * @return array with 'monitorURL' and 'smonitorURL' keys.
+     */
     public static function evaluate($id, $password = ' ', $userid = -1) {
         global $USER;
         self::validate_parameters( self::evaluate_parameters(), [
@@ -330,6 +389,12 @@ class mod_vpl_webservice extends external_api {
         $smonitorurl = 'wss://' . $res->server . ':' . $res->securePort . '/' . $res->monitorPath;
         return [ 'monitorURL' => $monitorurl, 'smonitorURL' => $smonitorurl  ];
     }
+
+    /**
+     * Returns the structure that the evaluate function returns.
+     *
+     * @return external_single_structure
+     */
     public static function evaluate_returns() {
         $desc = "URL to the service that monitor the evaluation in the jail server.
 Protocol WebSocket may be ws: or wss: (SSL).
@@ -347,8 +412,8 @@ if the websocket client send something to the server then the evaluation is stop
         ], 'Parameters', VALUE_REQUIRED );
     }
 
-    /*
-     * get_result function. retrieve the result of the evaluation
+    /**
+     * Get the parameters that must be used in get_result.
      */
     public static function get_result_parameters() {
         $descuserid = 'User ID to use (required mod/vpl:grade capability)';
@@ -358,6 +423,15 @@ if the websocket client send something to the server then the evaluation is stop
                 'userid' => new external_value( PARAM_INT, $descuserid , VALUE_DEFAULT, -1 ),
         ] );
     }
+
+    /**
+     * Returns the result of the evaluation.
+     *
+     * @param int $id The coursemodule id.
+     * @param string $password The password for using the VPL activity.
+     * @param int $userid The user id to use, -1 for current user.
+     * @return array with 'compilation', 'evaluation' and 'grade' keys.
+     */
     public static function get_result($id, $password = ' ', $userid = -1) {
         global $USER;
         self::validate_parameters( self::get_result_parameters(), [
@@ -401,6 +475,12 @@ if the websocket client send something to the server then the evaluation is stop
         }
         return $ret;
     }
+
+    /**
+     * Returns the structure of the result of the evaluation.
+     *
+     * @return external_single_structure
+     */
     public static function get_result_returns() {
         return new external_single_structure( [
                 'compilation' => new external_value( PARAM_RAW, 'Compilation result', VALUE_REQUIRED),

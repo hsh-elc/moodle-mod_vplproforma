@@ -27,26 +27,21 @@ namespace mod_vpl;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->dirroot . '/mod/vpl/tests/base_test.php');
+require_once($CFG->dirroot . '/mod/vpl/tests/base_fixture.php');
 
 use mod_vpl\tokenizer\token;
 use mod_vpl\util\assertf;
 
 /**
- * Unit tests for \mod_vpl\tokenizer\tokenizer_base class.
- *
- * @group mod_vpl
- * @group mod_vpl_vplt
- * @group mod_vpl_tokenizer
- * @group mod_vpl_tokenizer_base
- * @covers \mod_vpl\tokenizer\tokenizer_base
+ * Class tokenizer fixture base.
  */
-class tokenizer_base_test extends \advanced_testcase {
+class tokenizer_base_fixture extends \advanced_testcase {
     /**
      * Test cases for tokenizer_base::remove_capturing_groups
      *
      * - key   => input value to test
      * - value => expected result.
+     * @var array
      */
     protected static array $testcasesrcg;
 
@@ -55,6 +50,7 @@ class tokenizer_base_test extends \advanced_testcase {
      *
      * - key   => available data type
      * - value => [ true => [ list_of_valid_values ], false => [ list_of_invalid_values ] ]
+     * @var array
      */
     protected static array $testcasesckt;
 
@@ -63,6 +59,7 @@ class tokenizer_base_test extends \advanced_testcase {
      *
      * - key   => expected value to get
      * - value => list of input tokens to test
+     * @var array
      */
     protected static array $testcasesctk;
 
@@ -71,16 +68,19 @@ class tokenizer_base_test extends \advanced_testcase {
      *
      * - key      => integer value, not a real use
      * - value    => [ input => [ types, value, and regex to test ], output => expected value to get ]
+     * @var array
      */
     protected static array $testcasesgat;
 
     /**
      * State to use to test tokenizer_base::contains_rule
+     * @var array
      */
     protected static array $statetosearchrules;
 
     /**
      * Available tokens to use to test tokenizer::check_token
+     * @var array
      */
     protected const AVAILABLETOKENS = [
         "text" => 0,

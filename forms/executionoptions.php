@@ -29,12 +29,42 @@ require_once(dirname(__FILE__).'/../vpl.class.php');
 global $CFG;
 require_once($CFG->libdir.'/formslib.php');
 
+/**
+ * Class to define the form for setting execution options in VPL
+ *
+ * This form allows users to configure execution options such as run scripts,
+ * debug scripts, evaluators, run modes, and evaluation modes for a VPL instance.
+ */
 class mod_vpl_executionoptions_form extends moodleform {
+    /**
+     * @var mod_vpl The VPL instance for which the execution options are being set.
+     */
     protected $vpl;
+
+    /**
+     * Constructor for the execution options form.
+     *
+     * This constructor initializes the form with the VPL instance and prepares
+     * the page for displaying the form.
+     *
+     * @param moodle_page $page The page object.
+     * @param mod_vpl $vpl The VPL instance.
+     */
     public function __construct($page, $vpl) {
         $this->vpl = $vpl;
         parent::__construct( $page );
     }
+
+    /**
+     * Returns the script description from the file.
+     *
+     * This method reads the content of the specified script file and extracts
+     * the description using a regular expression. It returns an empty string
+     * if the file cannot be read or if no description is found.
+     *
+     * @param string $filename The path to the script file.
+     * @return string The script description or an empty string if not found.
+     */
     protected function get_scriptdescription($filename) {
         $data = file_get_contents($filename);
         if ($data === false ) {
@@ -47,6 +77,17 @@ class mod_vpl_executionoptions_form extends moodleform {
         }
         return '';
     }
+
+    /**
+     * Returns a list of scripts available in the specified directory.
+     *
+     * This method scans the given directory for files ending with the specified
+     * suffix and returns an associative array of script names with their descriptions.
+     *
+     * @param string $dir The directory to scan for scripts.
+     * @param string $endwith The suffix that the script files should end with.
+     * @return array An associative array of script names with their descriptions.
+     */
     protected function get_dirlist($dir, $endwith) {
         $avoid = ['default' => 1];
         $el = strlen($endwith);
@@ -63,14 +104,102 @@ class mod_vpl_executionoptions_form extends moodleform {
         return $list;
     }
 
+    /**
+     * Returns a list of run scripts available for the VPL instance.
+     *
+     * This method retrieves the available run scripts and formats them
+     * for selection in the form. It also handles inheritance from the closest
+     * set field in the base chain.
+     *
+     * @return array An associative array of run scripts with their names.
+     */
     protected function get_runlist() {
         return $this->get_dirlist(vpl_get_scripts_dir(), '_run.sh');
     }
 
+    /**
+     * Returns a list of debug scripts available for the VPL instance.
+     *
+     * This method retrieves the available debug scripts and formats them
+     * for selection in the form. It also handles inheritance from the closest
+     * set field in the base chain.
+     *
+     * @return array An associative array of debug scripts with their names.
+     */
     protected function get_debuglist() {
         return $this->get_dirlist(vpl_get_scripts_dir(), '_debug.sh');
     }
 
+    /**
+     * Returns a list of run modes available for the VPL instance.
+     *
+     * This method retrieves the available run modes and formats them
+     * for selection in the form. It also handles inheritance from the closest
+     * set field in the base chain.
+     *
+     * @return array An associative array of run modes with their names.
+     */
+    protected function get_run_modelist() {
+        $runlist = [];
+        $runlist[''] = get_string('default');
+        $runlist['1'] = get_string('run_mode:default', VPL);
+        $runlist['2'] = get_string('run_mode:text', VPL);
+        $runlist['3'] = get_string('run_mode:gui', VPL);
+        $runlist['4'] = get_string('run_mode:webapp', VPL);
+        $runlist['5'] = get_string('run_mode:textingui', VPL);
+        $inherit = $this->vpl->get_closest_set_field_in_base_chain('run_mode', '');
+        if ($inherit && isset($runlist[$inherit])) {
+            $runlist[''] = get_string('inheritvalue', VPL, $runlist[$inherit]);
+        }
+        return $runlist;
+    }
+
+    /**
+     * Returns a list of evaluation modes available for the VPL instance.
+     *
+     * @return array An associative array of evaluation modes with their names.
+     */
+    protected function get_evaluation_modelist() {
+        $evalutionlist = [];
+        $evalutionlist[''] = get_string('default');
+        $evalutionlist['1'] = get_string('evaluation_mode:default', VPL);
+        $evalutionlist['2'] = get_string('evaluation_mode:textingui', VPL);
+        $inherit = $this->vpl->get_closest_set_field_in_base_chain('evaluation_mode', '');
+        if ($inherit && isset($evalutionlist[$inherit])) {
+            $evalutionlist[''] = get_string('inheritvalue', VPL, $evalutionlist[$inherit]);
+        }
+        return $evalutionlist;
+    }
+
+    /**
+     * Returns a list of evaluators available for the VPL instance.
+     *
+     * This method retrieves the list of enabled evaluators and formats them
+     * for selection in the form. It also handles inheritance from the closest
+     * set field in the base chain.
+     *
+     * @return array An associative array of evaluators with their names.
+     */
+    protected function get_evaluatorlist() {
+        $evaluators = \mod_vpl\plugininfo\vplevaluator::get_enabled_plugins();
+        $evaluatorslist = ['' => get_string('default')];
+        foreach ($evaluators as $evaluator) {
+            $evaluatorslist[$evaluator] = get_string('pluginname', "vplevaluator_{$evaluator}");
+        }
+        $inherit = $this->vpl->get_closest_set_field_in_base_chain('evaluator', '');
+        if ($inherit && isset($evaluatorslist[$inherit])) {
+            $evaluatorslist[''] = get_string('inheritvalue', VPL, $evaluatorslist[$inherit]);
+        }
+        return $evaluatorslist;
+    }
+
+    /**
+     * Defines the form elements for execution options.
+     *
+     * This method sets up the form fields for configuring execution options
+     * such as based on another VPL instance, run script, debug script, evaluator,
+     * run mode, evaluation mode, and various execution flags.
+     */
     protected function definition() {
         $mform = & $this->_form;
         $id = $this->vpl->get_course_module()->id;
@@ -96,18 +225,38 @@ class mod_vpl_executionoptions_form extends moodleform {
         $mform->setDefault( 'basedon', $instance->basedon );
         $mform->addHelpButton( 'basedon', 'basedon', VPL );
 
-        $strautodetect = get_string('autodetect', VPL);
+        $inheritedrun = strtoupper($this->vpl->get_closest_set_field_in_base_chain('runscript', ''));
+        $inheriteddebug = strtoupper($this->vpl->get_closest_set_field_in_base_chain('debugscript', ''));
+        $strrundefault = $inheritedrun ? get_string('inheritvalue', VPL, $inheritedrun) : get_string('autodetect', VPL);
         $strrunscript = get_string('runscript', VPL);
-        $runlist = array_merge(['' => $strautodetect], $this->get_runlist());
+        $runlist = array_merge(['' => $strrundefault], $this->get_runlist());
         $mform->addElement( 'select', 'runscript', $strrunscript, $runlist );
         $mform->setDefault( 'runscript', $instance->runscript );
         $mform->addHelpButton('runscript', 'runscript', VPL);
 
+        $strdebugdefault = $inheriteddebug ? get_string('inheritvalue', VPL, $inheriteddebug) : get_string('autodetect', VPL);
         $strdebugscript = get_string('debugscript', VPL);
-        $debuglist = array_merge(['' => $strautodetect], $this->get_debuglist());
+        $debuglist = array_merge(['' => $strdebugdefault], $this->get_debuglist());
         $mform->addElement( 'select', 'debugscript', $strdebugscript, $debuglist );
         $mform->setDefault( 'debugscript', $instance->debugscript );
         $mform->addHelpButton('debugscript', 'debugscript', VPL);
+
+        $strevaluator = get_string('evaluator', VPL);
+        $mform->addElement( 'select', 'evaluator', $strevaluator, $this->get_evaluatorlist());
+        $mform->setDefault( 'evaluator', $instance->evaluator );
+        $mform->addHelpButton('evaluator', 'evaluator', VPL);
+
+        $strrunmode = get_string( 'run_mode', VPL );
+        $runmodelist = $this->get_run_modelist();
+        $mform->addElement( 'select', 'run_mode', $strrunmode, $runmodelist );
+        $mform->setDefault( 'run_mode', $instance->run_mode );
+        $mform->addHelpButton('run_mode', 'run_mode', VPL);
+
+        $strevaluatemode = get_string( 'evaluation_mode', VPL );
+        $evaluatemodelist = $this->get_evaluation_modelist();
+        $mform->addElement( 'select', 'evaluation_mode', $strevaluatemode, $evaluatemodelist );
+        $mform->setDefault( 'evaluation_mode', $instance->evaluation_mode );
+        $mform->addHelpButton('evaluation_mode', 'evaluation_mode', VPL);
 
         $mform->addElement( 'selectyesno', 'run', get_string( 'run', VPL ) );
         $mform->setDefault( 'run', $instance->run );
@@ -154,6 +303,9 @@ if ($fromform = $mform->get_data()) {
         $instance->run = $fromform->run;
         $instance->debug = $fromform->debug;
         $instance->evaluate = $fromform->evaluate;
+        $instance->evaluator = $fromform->evaluator;
+        $instance->run_mode = $fromform->run_mode;
+        $instance->evaluation_mode = $fromform->evaluation_mode;
         $instance->evaluateonsubmission = $fromform->evaluate && $fromform->evaluateonsubmission;
         $instance->automaticgrading = $fromform->evaluate && $fromform->automaticgrading;
         if ( $vpl->update() ) {

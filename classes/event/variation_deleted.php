@@ -15,7 +15,8 @@
 // along with VPL for Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * @package mod_vpl. Class for logging of variation deleted events
+ * Event class for when a variation is deleted.
+ * @package mod_vpl
  * @copyright 2014 onwards Juan Carlos Rodríguez-del-Pino
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
@@ -24,12 +25,30 @@ namespace mod_vpl\event;
 
 defined('MOODLE_INTERNAL') || die();
 require_once(dirname(__FILE__).'/../../locallib.php');
+
+/**
+ * Event class for when a variation is deleted.
+ * This class is used to log the event when a variation is deleted from the VPL module.
+ */
 class variation_deleted extends variation_base {
+
+    /**
+     * Initializes the event.
+     * This method is called when the event is created.
+     * It sets the action, data, and other properties of the event.
+     */
     protected function init() {
         parent::init();
         $this->data['crud'] = 'd';
         $this->legacyaction = 'deleted variation';
     }
+
+    /**
+     * Returns the description of the event.
+     * This method is used to provide a human-readable description of the event.
+     *
+     * @return string Description of the event.
+     */
     public function get_description() {
         return $this->get_description_mod( 'deleted' );
     }

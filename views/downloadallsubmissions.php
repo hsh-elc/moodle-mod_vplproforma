@@ -51,6 +51,7 @@ function vpl_user_zip_dirname( $name ) {
     $name = str_replace( '<', '_', $name );
     $name = str_replace( '>', '_', $name );
     $name = str_replace( '|', '_', $name );
+    $name = str_replace( '/', '_', $name );
     return $name;
 }
 
@@ -91,8 +92,9 @@ function vpl_add_files_to_zip($zip, $sourcedir, $zipdirname, $fgm, &$ziperrors) 
  * Adds new files to the zip file.
  * Returns bytes archived
  *
- * @param ZipArchive         $zip        Object that represents a zip file.
- * @param string             $zipdirname Zip directory name
+ * @param ZipArchive $zip Object that represents a zip file.
+ * @param mod_vpl_submission_CE $submission Submission object
+ * @param string $zipdirname Zip directory name
  *
  * @return int Bytes archived
  */
@@ -114,7 +116,7 @@ function vpl_add_ce_to_zip($zip, $submission, $zipdirname) {
             $total += strlen($cecg['execution']);
         }
         foreach (['gradecomments', 'usercomments', 'grade'] as $ele) {
-            if ( $cecg[$ele] !== '' ) {
+            if ( ! empty($cecg[$ele])) {
                 $zip->addFromString( $zipdirname . $ele . '.txt', $cecg[$ele]);
                 $total += strlen($cecg[$ele]);
             }
@@ -126,6 +128,10 @@ function vpl_add_ce_to_zip($zip, $submission, $zipdirname) {
 require_login();
 $id = required_param( 'id', PARAM_INT );
 $all = optional_param( 'all', 0, PARAM_INT );
+
+/**
+ * @var int Size trigger to close the zip file and reopen it.
+ */
 const SIZE_TRIGGER = 64 * 1024 * 1024; // 64Mb.
 $vpl = new mod_vpl( $id );
 $cm = $vpl->get_course_module();
@@ -173,6 +179,7 @@ foreach ($list as $uginfo) {
     if ($vpl->is_group_activity()) {
         $data->uginfo->firstname = 'Group';
         $data->uginfo->lastname = $uginfo->name;
+        $data->uginfo->username = '';
     }
     $usersubmissions = [];
     foreach ($submissions[$uginfo->id] as $subinstance) {
@@ -197,8 +204,8 @@ if ($zip->open($zipfilename, ZipArchive::OVERWRITE) === true) {
     $sizearchived = 0;
     foreach ($alldata as $data) {
         $user = $data->uginfo;
-        $zipdirname = vpl_user_zip_dirname($user->lastname . ' ' . $user->firstname);
-        $zipdirname .= ' ' . $user->id . ' ' . $user->username;
+        $zipdirname = $user->lastname . ' ' . $user->firstname . ' ' . $user->id . ' ' . $user->username;
+        $zipdirname = vpl_user_zip_dirname($zipdirname);
         // Create directory.
         $zip->addEmptyDir( $zipdirname );
         $zipdirname .= '/';

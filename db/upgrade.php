@@ -15,12 +15,42 @@
 // along with VPL for Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
+ * VPL upgrade code.
  *
  * @package mod_vpl
  * @copyright 2012 Juan Carlos Rodríguez-del-Pino
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
+
+/**
+ * Adds a field to a table if it does not exist.
+ *
+ * @param xmldb_manager $dbman The database manager
+ * @param xmldb_table $table The table to add the field to
+ * @param xmldb_field $field The field to add
+ */
+function xmldb_vpl_addfield($dbman, $table, $field) {
+    if ($dbman->field_exists($table, $field)) {
+        return;
+    }
+    $dbman->add_field($table, $field);
+}
+
+/**
+ * Drops a field from a table if it exists
+ *
+ * @param xmldb_manager $dbman The database manager
+ * @param xmldb_table $table The table to drop the field from
+ * @param string $fieldname The name of the field to drop
+ */
+function xmldb_vpl_dropfield($dbman, $table, $fieldname) {
+    $field = new xmldb_field($fieldname);
+    if (! $dbman->field_exists($table, $field)) {
+        return;
+    }
+    $dbman->drop_field($table, $field);
+}
 
 /**
  * Migrate data_vpl dir to upgrades VPL to 2.2 (2012060112) version
@@ -476,7 +506,7 @@ function xmldb_vpl_upgrade_2022110512() {
 }
 
 /**
- * Upgrades VPL to 4.3 (2024010212) version
+ * Upgrades VPL to 4.2 (2024010212) version
  *
  * @return void
  */
@@ -492,6 +522,38 @@ function xmldb_vpl_upgrade_2024010212() {
     if (!$dbman->field_exists($table, $field)) {
         $dbman->add_field($table, $field);
     }
+}
+
+/**
+ * Upgrades VPL to 4.3 version
+ *
+ * @return void
+ */
+function xmldb_vpl_upgrade_2025052313() {
+    global $DB;
+
+    $dbman = $DB->get_manager();
+
+    // Updating vpl table.
+    $table = new xmldb_table('vpl');
+    xmldb_vpl_dropfield($dbman, $table, 'emailteachers');
+    $field = new xmldb_field('evaluator', XMLDB_TYPE_CHAR, '64', null, null, null, null, 'debugscript');
+    xmldb_vpl_addfield($dbman, $table, $field);
+    $field = new xmldb_field('run_mode', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'evaluator');
+    xmldb_vpl_addfield($dbman, $table, $field);
+    $field = new xmldb_field('evaluation_mode', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'run_mode');
+    xmldb_vpl_addfield($dbman, $table, $field);
+
+    // Updating vpl_submissions table.
+    $table = new xmldb_table('vpl_submissions');
+    xmldb_vpl_dropfield($dbman, $table, 'mailed');
+    xmldb_vpl_dropfield($dbman, $table, 'highlight');
+    $field = new xmldb_field('save_count', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'nevaluations');
+    xmldb_vpl_addfield($dbman, $table, $field);
+    $field = new xmldb_field('run_count', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'save_count');
+    xmldb_vpl_addfield($dbman, $table, $field);
+    $field = new xmldb_field('debug_count', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'run_count');
+    xmldb_vpl_addfield($dbman, $table, $field);
 }
 
 /**
@@ -546,11 +608,15 @@ function xmldb_vpl_upgrade($oldversion = 0) {
         xmldb_vpl_upgrade_2022110512();
         upgrade_mod_savepoint(true, 2022110512, 'vpl');
     }
-    $vpl43 = 2024010212;
-    if ($oldversion < $vpl43) {
+    $vpl42 = 2024010212;
+    if ($oldversion < $vpl42) {
         xmldb_vpl_upgrade_2024010212();
+        upgrade_mod_savepoint(true, $vpl42, 'vpl');
+    }
+    $vpl43 = 2025052313;
+    if ($oldversion < $vpl43) {
+        xmldb_vpl_upgrade_2025052313();
         upgrade_mod_savepoint(true, $vpl43, 'vpl');
     }
-
     return true;
 }

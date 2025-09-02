@@ -14,6 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with VPL for Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+use mod_h5pactivity\output\result\other;
+
+defined( 'MOODLE_INTERNAL' ) || die();
+require_once(dirname(__FILE__).'/locallib.php');
+require_once(dirname(__FILE__).'/views/sh_factory.class.php');
+require_once(dirname(__FILE__).'/similarity/watermark.class.php');
+
 /**
  * Class to manage a group of files
  *
@@ -22,50 +29,40 @@
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
-
-defined( 'MOODLE_INTERNAL' ) || die();
-require_once(dirname(__FILE__).'/locallib.php');
-require_once(dirname(__FILE__).'/views/sh_factory.class.php');
-require_once(dirname(__FILE__).'/similarity/watermark.class.php');
-
 class file_group_process {
     /**
-     * Name of file list
-     *
-     * @var string
+     * @var string $filelistname Name of file list
      */
     protected $filelistname;
 
     /**
-     * Path to directory where files are saved
-     *
-     * @var string
+     * @var string $dir Path to directory where files are saved
      */
     protected $dir;
 
     /**
-     * Maximum number of files
-     *
-     * @var int
+     * @var int $maxnumfiles Maximum number of files
      */
     protected $maxnumfiles;
 
     /**
-     * Number of files not changeables 0..($numstaticfiles-1)
-     *
-     * @var int
+     * @var int $numstaticfiles Number of file names not changeables 0..($numstaticfiles-1)
      */
     protected $numstaticfiles;
 
     /**
      * Save an array of strings in a file
      *
-     * @param $filename string
-     * @param $list array of strings
+     * @param string $filename Name of the file to save the list.
+     * @param array $list Array of strings to save in the file.
+     * @param string $otherfln If not false, use this file name to save the list.
      *
      * @return void
      */
     public static function write_list($filename, $list, $otherfln = false) {
+        if ( !function_exists('link') ) {
+            $otherfln = false; // If link() is not available, do not use other file.
+        }
         $data = '';
         foreach ($list as $info) {
             if ($info > '') {
@@ -85,9 +82,9 @@ class file_group_process {
     }
 
     /**
-     * get parsed lines of a file
+     * Get parsed lines of a file
      *
-     * @param $filename string
+     * @param string $filename string
      * @return array of lines of the file
      */
     public static function read_list($filename) {
@@ -101,17 +98,17 @@ class file_group_process {
         }
         return $ret;
     }
+
     /**
      * Constructor
      *
-     * @param string $filelistname
-     * @param string $dir
-     * @param int $maxnumfiles
-     * @param int $numstaticfiles
+     * @param string $dir Path to the directory where files are saved.
+     * @param int $maxnumfiles Maximum number of files in the group.
+     * @param int $numstaticfiles Number of files that must exist.
      */
     public function __construct($dir, $maxnumfiles = 10000, $numstaticfiles = 0) {
-        $this->filelistname = dirname($dir) . "/" . basename($dir) . ".lst";
-        $this->dir = dirname($dir) . "/" . basename($dir) . "/";
+        $this->dir = dirname($dir) . "/" . basename($dir);
+        $this->filelistname = $this->dir . ".lst";
         $this->maxnumfiles = $maxnumfiles;
         $this->numstaticfiles = $numstaticfiles;
     }
@@ -126,7 +123,6 @@ class file_group_process {
 
     /**
      * Get number of static files.
-     *
      * @return int
      */
     public function get_numstaticfiles() {
@@ -134,8 +130,8 @@ class file_group_process {
     }
 
     /**
-     * encode file path to be a file name
-     * @parm path file path
+     * Encode file path to be a file name
+     * @param string $path file path
      * @return string
      */
     public static function encodefilename($path) {
@@ -145,9 +141,9 @@ class file_group_process {
     /**
      * Add a new file to the group/Modify the data file
      *
-     * @param string $filename
-     * @param string $data
-     * @return bool (added==true)
+     * @param string $filename Name of the file to add or modify.
+     * @param string $data Data to write in the file. If null, the file is deleted.
+     * @return bool true if the file was added or modified, false if the file could not be added
      */
     public function addfile($filename, $data = null) {
         if (! vpl_is_valid_path_name( $filename )) {
@@ -155,7 +151,7 @@ class file_group_process {
         }
         ignore_user_abort( true );
         $filelist = $this->getFileList();
-        $path = $this->dir . self::encodeFileName( $filename );
+        $path = $this->dir . '/' . self::encodeFileName( $filename );
         if (array_search($filename, $filelist) !== false) {
             if ($data !== null) {
                 vpl_fwrite( $path, $data );
@@ -181,10 +177,14 @@ class file_group_process {
      * Add new files to the group/Modify the data file
      *
      * @param array $files
-     * @return bool (added==true)
+     * @param string $otherdir If not false, use this directory to check if the file exists.
+     * @param string $otherfln If not false, use this file name to save the list.
      */
     public function addallfiles($files, $otherdir = false, $otherfln = false) {
         ignore_user_abort( true );
+        if ( !function_exists('link') ) {
+            $otherdir = false; // If link() is not available, do not use other dir.
+        }
         $filelist = $this->getFileList();
         $filehash = [];
         foreach ($filelist as $f) {
@@ -199,7 +199,7 @@ class file_group_process {
                 $data = '';
             }
             $fnencode = self::encodeFileName( $filename );
-            $path = $this->dir . $fnencode;
+            $path = $this->dir . '/' . $fnencode;
             if ( $otherdir != false ) {
                 $otherpath = $otherdir . $fnencode;
                 if (file_exists( $otherpath)
@@ -222,7 +222,7 @@ class file_group_process {
         ignore_user_abort( true );
         $filelist = $this->getFileList();
         foreach ($filelist as $filename) {
-            $fullname = $this->dir . self::encodeFileName( $filename );
+            $fullname = $this->dir . '/' . self::encodeFileName( $filename );
             if (is_file( $fullname )) {
                 unlink( $fullname );
             }
@@ -241,7 +241,7 @@ class file_group_process {
     /**
      * Get list of files
      *
-     * @return string[]
+     * @return array
      */
     public function getfilelist() {
         return self::read_list($this->filelistname);
@@ -256,7 +256,7 @@ class file_group_process {
         $files = [];
         $filelist = $this->getFileList();
         foreach ($filelist as $filename) {
-            $fullname = $this->dir . self::encodeFileName( $filename );
+            $fullname = $this->dir . '/' . self::encodeFileName( $filename );
             if (is_file( $fullname )) {
                  $files[$filename] = file_get_contents( $fullname );
             } else {
@@ -269,7 +269,8 @@ class file_group_process {
     /**
      * Set the file list.
      *
-     * @param string[] $filelist
+     * @param array $filelist List of file names to save.
+     * @param bool $otherfln If true, use the other file name to save the list.
      */
     public function setfilelist($filelist, $otherfln = false) {
         self::write_list($this->filelistname, $filelist, $otherfln );
@@ -279,7 +280,7 @@ class file_group_process {
      * Get the file comment by number
      *
      * @param int $num
-     * @return string
+     * @return string comment for the file
      */
     public function getfilecomment($num) {
         return get_string( 'file' ) . ' ' . ($num + 1);
@@ -289,14 +290,14 @@ class file_group_process {
      * Get the file data by number or name
      *
      * @param int/string $mix
-     * @return string
+     * @return string file data or empty string if file does not exist
      */
     public function getfiledata($mix) {
         if (is_int( $mix )) {
             $num = $mix;
             $filelist = $this->getFileList();
             if ($num >= 0 && $num < count( $filelist )) {
-                $filename = $this->dir . self::encodeFileName( $filelist[$num] );
+                $filename = $this->dir . '/' . self::encodeFileName( $filelist[$num] );
                 if (is_file( $filename )) {
                     return file_get_contents( $filename );
                 } else {
@@ -306,7 +307,7 @@ class file_group_process {
         } else if (is_string( $mix )) {
             $filelist = $this->getFileList();
             if (array_search( $mix, $filelist ) !== false) {
-                $fullfilename = $this->dir . self::encodeFileName( $mix );
+                $fullfilename = $this->dir . '/' . self::encodeFileName( $mix );
                 if (is_file( $fullfilename )) {
                     return file_get_contents( $fullfilename );
                 } else {
@@ -321,12 +322,12 @@ class file_group_process {
     /**
      * Return is there is some file with data
      *
-     * @return boolean
+     * @return boolean true if there is some file with data, false otherwise
      */
     public function is_populated() {
         $filelist = $this->getFileList();
         foreach ($filelist as $filename) {
-            $fullname = $this->dir . self::encodeFileName( $filename );
+            $fullname = $this->dir . '/' . self::encodeFileName( $filename );
             if (is_file( $fullname )) {
                 $info = stat( $fullname );
                 if ($info['size'] > 0) {
@@ -340,34 +341,51 @@ class file_group_process {
     /**
      * Return a version number for the group file
      *
-     * @return int
+     * @return int Version number based on the last modification time of the directory
      */
     public function getversion() {
-        try {
+        if (file_exists( $this->dir )) {
             $info = stat($this->dir);
-        } catch (\Throwable $e) {
-            return 0;
-        }
-        if ($info !== false) {
-            return $info['mtime'];
+            if ($info !== false) {
+                return $info['mtime'];
+            } else {
+                return 0;
+            }
         } else {
             return 0;
         }
     }
 
-    static protected $outputtextsize = 0; // Total size of text files shown.
-    static protected $outputbinarysize = 0; // Total size of binary files shown.
-    static protected $outputtextlimit = 100000; // Limit of total size of text files shown.
-    static protected $outputbinarylimit = 10000000; // Limit of total size of binary files shown.
     /**
-     * Print file group
+     * @var int $outputtextsize Total size of text files shown.
+     */
+    static protected $outputtextsize = 0;
+
+    /**
+     * @var int $outputbinarysize Total size of binary files shown.
+     */
+    static protected $outputbinarysize = 0;
+
+    /**
+     * @var int $outputtextlimit Limit of total size of text files shown.
+     */
+    static protected $outputtextlimit = 100000;
+
+    /**
+     * @var int $outputbinarylimit Limit of total size of binary files shown.
+     */
+    static protected $outputbinarylimit = 10000000;
+    /**
+     * Print the files in the group.
+     *
+     * @param bool $ifnoexist If true, prints the file name even if the file does not exist.
      */
     public function print_files($ifnoexist = true) {
         $filenames = $this->getFileList();
         $showbinary = self::$outputbinarysize < self::$outputbinarylimit;
         $showcode = self::$outputtextsize < self::$outputtextlimit;
         foreach ($filenames as $name) {
-            if (is_file( $this->dir . self::encodeFileName( $name ) )) {
+            if (is_file( $this->dir . '/' . self::encodeFileName( $name ) )) {
                 if ( vpl_is_binary($name) ) {
                     if ($showbinary) {
                         $printer = vpl_sh_factory::get_sh( $name );
@@ -398,7 +416,7 @@ class file_group_process {
     /**
      * Generate temporal zip file
      *
-     * @parm $watermark bool Adds watermark to files
+     * @param bool $watermark bool Adds watermark to files
      */
     public function generate_zip_file(bool $watermark = false) {
         global $CFG;
@@ -432,7 +450,8 @@ class file_group_process {
     /**
      * Download files as zip
      *
-     * @parm $name name of the generated zip file
+     * @param string $name Name of the zip file to download
+     * @param bool $watermark Add watermark to files in the zip
      */
     public function download_files($name, $watermark = false) {
         $zipfilename = $this->generate_zip_file($watermark);

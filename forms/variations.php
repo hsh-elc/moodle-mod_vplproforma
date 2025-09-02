@@ -33,6 +33,9 @@ require_once($CFG->libdir.'/formslib.php');
  * Class to define variation activation and variation title form
  */
 class mod_vpl_variation_option_form extends moodleform {
+    /**
+     * Defines the form elements of variation title and activation
+     */
     protected function definition() {
         $mform = & $this->_form;
         $mform->addElement( 'header', 'variation_options', get_string( 'variation_options', VPL ) );
@@ -52,16 +55,32 @@ class mod_vpl_variation_option_form extends moodleform {
  * Class to define variation add and edit form
  */
 class mod_vpl_variation_form extends moodleform {
+
+    /**
+     * @var int $varid the id of the variation to edit, -1 for new variation
+     */
     protected $varid;
+
+    /**
+     * @var int $number Number of the variation in the page
+     */
     protected $number;
-    // Parm $varid = -1 new variation.
+    /**
+     * Constructor
+     * @param object $page the page where the form will be displayed
+     * @param int $number the number of the variation in the page
+     * @param int $varid the id of the variation to edit, -1 for new variation
+     */
     public function __construct($page, $number = 0, $varid = 0) {
         $this->number = $number;
         $this->varid = $varid;
         parent::__construct( $page );
     }
+
+    /**
+     * Defines the form elements
+     */
     protected function definition() {
-        global $CFG;
         $mform = & $this->_form;
         if ($this->number > 0) {
             $title = get_string( 'variation_n', VPL, "{$this->number}" );
@@ -123,7 +142,6 @@ function get_variation_with_edit_html($variation, $cmid, $number) {
  * @return string HTML
  */
 function get_link_variation_html($variation, $cmid, $number) {
-    global $OUTPUT;
     $parms = ['id' => $cmid];
     $anchor = "vpl_variation_{$cmid}_{$number}";
     $url = new moodle_url( '/mod/vpl/forms/variations.php', $parms, $anchor);
@@ -152,7 +170,7 @@ function get_add_variation_html($cmid) {
  * @param object $vpl current VPL activity
  */
 function print_basic_html($form, $vpl) {
-    global $DB, $OUTPUT;
+    global $DB;
     $form->set_data($vpl->get_instance());
     $form->display();
     $list = $DB->get_records('vpl_variations', ['vpl' => $vpl->get_instance()->id]);
@@ -175,6 +193,7 @@ require_login();
 
 $id = required_param('id', PARAM_INT);
 $varid = optional_param('varid', -13, PARAM_INT);
+$canceled = optional_param('cancel', '', PARAM_TEXT) !== '';
 $vpl = new mod_vpl($id);
 $vpl->prepare_page('forms/variations.php', ['id' => $id]);
 vpl_include_jsfile('hideshow.js');
@@ -186,7 +205,7 @@ $vpl->print_heading_with_help('variations');
 $form = new mod_vpl_variation_option_form($href);
 // Generate default form and check for action.
 if ($varid == -13) { // No variation, basic form.
-    if (isset($_POST['cancel'])) {
+    if ($canceled) {
         vpl_notice(get_string('cancelled'));
         print_basic_html($form, $vpl);
     } else if ($fromform = $form->get_data()) {
@@ -205,7 +224,7 @@ if ($varid == -13) { // No variation, basic form.
     $mform = new mod_vpl_variation_form($href, 0, -1);
     $fromform = $mform->get_data();
     if ($fromform) {
-        if (isset($_POST['cancel'])) {
+        if ($canceled) {
             vpl_notice(get_string('cancelled'));
             print_basic_html($form, $vpl);
         } else {
@@ -229,7 +248,7 @@ if ($varid == -13) { // No variation, basic form.
     $mform = new mod_vpl_variation_form($href, $number, $varid);
     $fromform = $mform->get_data();
     if ($fromform) {
-        if (isset($_POST['cancel'])) {
+        if ($canceled) {
             vpl_notice(get_string('cancelled'));
             print_basic_html($form, $vpl);
         } else if ( isset($_POST['delete']) ) { // Deletes variation and its assignned variations.
