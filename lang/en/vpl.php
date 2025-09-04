@@ -32,6 +32,7 @@ $string['acceptcertificatesnote'] = "<p>You are using an encrypted connection.<p
 <p>To use an encrypted connection with the execution servers it is required you accept its certificates.</p>
 <p>If you have problems with this process, you can try to use a http (unencrypted) connection or other browser.</p>
 <p>Please, click on the following links (server #) and accept the offered certificate.</p>";
+$string['acceptselfsigned_help'] = 'Should a connection to the web service be established if it uses self-signed TLS certificates? (Default: No)';
 $string['addfile'] = 'Add file';
 $string['addoverride'] = 'Add an override';
 $string['advanced'] = 'Advanced';
@@ -180,6 +181,10 @@ $string['executionoptions_help'] = '<p>Various execution options are set in this
 <li><b>Evaluate upon files submission</b>: the submission is evaluated automatically when it is uploaded.</li>
 <li><b>Automatic grading</b>: if the evaluation result includes grading codes, they are used to set the grade automatically.</li>
 </ul>';
+$string['feedbackformat'] = 'Feedback format';
+$string['feedbackformat_help'] = 'Should the grading feedback be sent as zip or xml? (Default: zip)';
+$string['feedbackstructure'] = 'Feedback structure';
+$string['feedbackstructure_help'] = 'Which feedback structure (separate or merged test feedback) should be sent back? (Default: separate-test-feedback)';
 $string['file'] = 'File';
 $string['fileNotChanged'] = 'File has not changed';
 $string['file_name'] = 'File name';
@@ -226,6 +231,11 @@ $string['gradeoptions'] = 'Grade options';
 $string['grader'] = "Evaluator";
 $string['gradercomments'] = 'Assessment report';
 $string['graderemoved'] = 'The grade has been removed';
+$string['gradername'] = 'Grader name';
+$string['gradername_help'] = 'Name of the grader as it is configured on the web service';
+$string['gradersettingsheader'] = 'ProFormA grader settings';
+$string['graderversion'] = 'Grader version';
+$string['graderversion_help'] = 'Version of the grader as it is configured on the web service';
 $string['gradesaved'] = 'Grade saved';
 $string['gradesaved_redirect'] = 'Grade saved. This page should redirect automatically.';
 $string['groupwork'] = 'Group work';
@@ -263,6 +273,10 @@ $string['listofcomments'] = 'List of comments';
 $string['lists'] = 'Lists';
 $string['listsimilarity'] = 'List of similarities found';
 $string['listwatermarks'] = 'Water marks list';
+$string['lmsid'] = 'LMS ID';
+$string['lmsid_help'] = 'LMS ID used to connect to the web service';
+$string['lmspassword'] = 'LMS password';
+$string['lmspassword_help'] = 'Password for the provided LMS ID';
 $string['load'] = 'Load';
 $string['loading'] = 'Loading';
 $string['local_jail_servers'] = 'Local execution servers';
@@ -355,6 +369,7 @@ $string['nowatermark'] = 'Own water marks {$a}';
 $string['nsubmissions'] = '{$a} submissions';
 $string['numcluster'] = 'Cluster {$a}';
 $string['open'] = 'Open';
+$string['openproformataskform'] = 'Open ProFormA task settings page';
 $string['operatorsvalues'] = 'Operators/Values';
 $string['opnotallowfromclient'] = 'Action not allowed from this machine';
 $string['options'] = 'Options';
@@ -425,6 +440,8 @@ $string['privacy:overridepath'] = 'assigned_override';
 $string['privacy:runningprocesspath'] = 'running_process_{$a}';
 $string['privacy:submissionpath'] = 'submission_{$a}';
 $string['privacy:variationpath'] = 'assigned_variation';
+$string['proformataskfile'] = 'ProFormA task file';
+$string['proformataskfile_help'] = 'Upload area for the ProFormA task file and other required files. The task.xml file can be uploaded as a plain file, multiple files must be uploaded as a zip file that also contains the task.xml file.';
 $string['proposedgrade'] = 'Proposed grade: {$a}';
 $string['proxy'] = 'proxy';
 $string['proxy_description'] = 'Proxy from Moodle to execution servers';
@@ -432,6 +449,8 @@ $string['redo'] = 'Redo';
 $string['reductionbyevaluation'] = "Reduction by automatic evaluation";
 $string['reductionbyevaluation_help'] = "Reduce final score by a value or percentage for each automatic evaluation requested by the student";
 $string['regularscreen'] = 'Regular screen';
+$string['releaseselect'] = 'Download VPL-ProFormA-Integration release';
+$string['releaseselect_help'] = 'Select the release of the VPL-ProFormA-Integration that should be used for this activity (Source: GitHub -> hsh-elc -> vpl-grappa-integration)';
 $string['removeallsubmissions'] = 'Remove all submissions and grades';
 $string['removeallsubmissions_help'] = 'Remove all submissions and grades in all VPL activities in the selected course';
 $string['removebreakpoint'] = 'Remove breakpoint';
@@ -508,6 +527,8 @@ $string['select_all'] = 'Select all';
 $string['selectbreakpoint'] = 'Select breakpoint';
 $string['server'] = 'Server';
 $string['serverexecutionerror'] = 'Server execution error';
+$string['serviceurl'] = 'Service URL';
+$string['serviceurl_help'] = 'URL of the web service that connects the graders';
 $string['setbyexecutionoptions'] = 'set by execution options';
 $string['shortcuts'] = 'Keyboard shortcuts';
 $string['shortdescription'] = 'Short description';
@@ -521,6 +542,8 @@ $string['startdate'] = 'Available from';
 $string['starting'] = 'Starting';
 $string['step'] = 'Step';
 $string['stop'] = 'Stop';
+$string['studentfeedbacklevel'] = 'Student feedback level';
+$string['studentfeedbacklevel_help'] = 'The level of feedback that a student should receive after a grading (Default: info)';
 $string['submission'] = 'Submission';
 $string['submissionperiod'] = 'Submission period';
 $string['submissionrestrictions'] = 'Submission restrictions';
@@ -538,12 +561,30 @@ $string['submissionview'] = 'Submission view';
 $string['submitarchive'] = 'Submit archive';
 $string['submitfiles'] = 'Submit files';
 $string['submitmethod'] = 'Submit method';
+$string['submitproformatask'] = 'Submit and return to Execution options';
 $string['submittedby'] = 'Submitted by {$a}';
 $string['submittedon'] = 'Submitted on';
 $string['submittedonp'] = 'Submitted on {$a}';
 $string['subplugintype_vplevaluator'] = 'VPL submissions evaluator';
 $string['subplugintype_vplevaluator_plural'] = 'VPL submissions evaluators';
 $string['sureresetfiles'] = 'Do you want to lost all your work and reset the files to its original state?';
+$string['teacherfeedbacklevel'] = 'Teacher feedback level';
+$string['teacherfeedbacklevel_help'] = 'The level of feedback that a teacher should receive after a grading (Default: debug)';
+$string['teacherguideconfiguregrader:text'] = 
+'The VPL-ProFormA-Integration needs information about the web service and grader that should be used for grading submissions.<br>
+This can be submitted through the ProFormA grader settings in this form. Each input element has a help-button that displays further information.';
+$string['teacherguideconfiguregrader:title'] = '2. Configure grader';
+$string['teacherguideheader'] = 'Teacher guide';
+$string['teacherguideselectrelease:text'] = 
+'To use VPL alongside a ProFormA task, you need to download the VPL-ProFormA-Integration from GitHub and add it to the Execution Files tab.<br>
+This can be done automatically by just selecting the desired release in the dropdown-menu.';
+$string['teacherguideselectrelease:title'] = '1. Select release';
+$string['teacherguidesummary:text'] = 'After pressing "Submit and return to Execution options", the current VPL activity is automatically configured for grading submissions with a ProFormA compatible grader.';
+$string['teacherguidesummary:title'] = '4. Done.';
+$string['teacherguideuploadtask:text'] = 
+'A ProFormA task.xml file is required. This can be uploaded in the ProFormA task file section alongside other files.<br>
+The task.xml file can be dropped separately in the file upload menu or multiple files can be uploaded as a zip file. The zip must also contain the task.xml file.';
+$string['teacherguideuploadtask:title'] = '3. Upload task';
 $string['test'] = 'Test activity';
 $string['testcases'] = 'Test cases';
 $string['testcases_help'] = 'This feature allows to run the student program and check its output for a given input. To set up the evaluation cases you must populate the file &quot;vpl_evaluate.cases&quot;.<br>
@@ -604,6 +645,7 @@ $string['vpl:setjails'] = 'Set execution servers for particular VPL instances';
 $string['vpl:similarity'] = 'Search VPL assignment similarity';
 $string['vpl:submit'] = 'Submit VPL assignment';
 $string['vpl:view'] = 'View full VPL assignment description';
+$string['vplproformaheader'] = 'Download VPL-ProFormA-Integration to Execution Files tab';
 $string['vpl_debug.sh'] = 'This script prepares the debugging';
 $string['vpl_evaluate.cases'] = 'Test cases for evaluation';
 $string['vpl_evaluate.sh'] = 'This script prepares the evaluation';
