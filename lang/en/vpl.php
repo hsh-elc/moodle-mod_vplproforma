@@ -32,6 +32,7 @@ $string['acceptcertificatesnote'] = "<p>You are using an encrypted connection.<p
 <p>To use an encrypted connection with the execution servers it is required you accept its certificates.</p>
 <p>If you have problems with this process, you can try to use a http (unencrypted) connection or other browser.</p>
 <p>Please, click on the following links (server #) and accept the offered certificate.</p>";
+$string['acceptselfsigned'] = 'Accept self signed certificates';
 $string['acceptselfsigned_help'] = 'Should a connection to the web service be established if it uses self-signed TLS certificates? (Default: No)';
 $string['addfile'] = 'Add file';
 $string['addoverride'] = 'Add an override';

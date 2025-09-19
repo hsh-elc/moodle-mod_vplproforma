@@ -65,21 +65,25 @@ class mod_vpl_proforma_submission_form extends moodleform {
 
         $mform->addElement('text', PROFORMA_SETTINGS_SERVICE_URL_ELEM, get_string('serviceurl', VPL));
         $mform->addHelpButton(PROFORMA_SETTINGS_SERVICE_URL_ELEM, 'serviceurl', VPL);
+        $mform->setType(PROFORMA_SETTINGS_SERVICE_URL_ELEM, PARAM_URL);
 
         $mform->addElement('text', PROFORMA_SETTINGS_LMS_ID_ELEM, get_string('lmsid', VPL));
         $mform->addHelpButton(PROFORMA_SETTINGS_LMS_ID_ELEM, 'lmsid', VPL);
+        $mform->setType(PROFORMA_SETTINGS_LMS_ID_ELEM, PARAM_TEXT);
 
         $mform->addElement('passwordunmask', PROFORMA_SETTINGS_LMS_PASSWORD_ELEM, get_string('lmspassword', VPL));
         $mform->addHelpButton(PROFORMA_SETTINGS_LMS_PASSWORD_ELEM, 'lmspassword', VPL);
 
-        $mform->addElement('select', PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_ELEM, get_string('acceptcertificates', VPL), PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_SELECT_OPTIONS);
+        $mform->addElement('select', PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_ELEM, get_string('acceptselfsigned', VPL), PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_SELECT_OPTIONS);
         $mform->addHelpButton(PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_ELEM, 'acceptselfsigned', VPL);
 
         $mform->addElement('text', PROFORMA_SETTINGS_GRADER_NAME_ELEM, get_string('gradername', VPL));
         $mform->addHelpButton(PROFORMA_SETTINGS_GRADER_NAME_ELEM, 'gradername', VPL);
+        $mform->setType(PROFORMA_SETTINGS_GRADER_NAME_ELEM, PARAM_TEXT);
 
         $mform->addElement('text', PROFORMA_SETTINGS_GRADER_VERSION_ELEM, get_string('graderversion', VPL));
         $mform->addHelpButton(PROFORMA_SETTINGS_GRADER_VERSION_ELEM, 'graderversion', VPL);
+        $mform->setType(PROFORMA_SETTINGS_GRADER_VERSION_ELEM, PARAM_TEXT);
 
         $mform->addElement('select', PROFORMA_SETTINGS_FEEDBACK_FORMAT_ELEM, get_string('feedbackformat', VPL), PROFORMA_SETTINGS_FEEDBACK_FORMAT_SELECT_OPTIONS);
         $mform->addHelpButton(PROFORMA_SETTINGS_FEEDBACK_FORMAT_ELEM, 'feedbackformat', VPL);
