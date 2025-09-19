@@ -25,11 +25,20 @@
 defined('MOODLE_INTERNAL') || die();
 require_once(dirname(__FILE__).'/vpl_submission_CE.class.php');
 
+/**
+ * Class mod_vpl_example_CE
+ *
+ * This class to manage example activities using a fake submission.
+ * It extends the mod_vpl_submission_CE class, which handles the compilation execution
+ * of submissions in VPL activities.
+ *
+ * @package mod_vpl
+ */
 class mod_vpl_example_CE extends mod_vpl_submission_CE {
     /**
      * Constructor
      *
-     * @param mod_vpl $vpl. instance of mod_vpl
+     * @param mod_vpl $vpl instance of mod_vpl
      */
     public function __construct($vpl) {
         global $USER;
@@ -40,6 +49,9 @@ class mod_vpl_example_CE extends mod_vpl_submission_CE {
         $fake->datesubmitted = time() - 60;
         $fake->comments = '';
         $fake->nevaluations = 0;
+        $fake->save_count = 1;
+        $fake->run_count = 0;
+        $fake->debug_count = 0;
         $fake->groupid = 0;
         parent::__construct($vpl, $fake);
     }
@@ -64,8 +76,7 @@ class mod_vpl_example_CE extends mod_vpl_submission_CE {
     /**
      * Save Compilation Execution result. Removed
      *
-     * @param $result array
-     *            response from server
+     * @param array $result response from server
      * @return void
      */
     public function savece($result) {

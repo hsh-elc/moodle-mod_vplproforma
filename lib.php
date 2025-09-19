@@ -87,8 +87,6 @@ function vpl_grade_item_update($instance, $grades=null) {
  * @param stdClass $instance   of VPL database record
  * @param int      $userid     specific user only, 0 means all
  * @param bool     $nullifnone - not used
- *
- * @return bollean true correct, false fail
  */
 function vpl_update_grades($instance, $userid=0, $nullifnone=true) {
     global $CFG, $USER;
@@ -137,7 +135,7 @@ function vpl_update_grades($instance, $userid=0, $nullifnone=true) {
             $grades[$grade->userid] = $grade;
         }
     }
-    return vpl_grade_item_update($instance, $grades);
+    vpl_grade_item_update($instance, $grades);
 }
 /**
  * Deletes grade_item from a vpl instance+id
@@ -287,9 +285,9 @@ function vpl_add_instance($instance) {
  * Updates a vpl instance event.
  *
  * @param object $instance VPL DB record
- * @return boolean OK
+ * @return void
  */
-function vpl_update_instance_event($instance) {
+function vpl_update_instance_event($instance): void {
     global $DB, $CFG;
     require_once($CFG->dirroot . '/calendar/lib.php');
     $event = vpl_create_event($instance, $instance->id);
@@ -317,8 +315,8 @@ function vpl_update_instance_event($instance) {
 /**
  * Updates a vpl instance
  *
- * @param object from the form in mod.html
- * @return boolean OK
+ * @param object $instance from the form in mod.html
+ * @return boolean True if updated, false if not found
  */
 function vpl_update_instance($instance) {
     global $DB;
@@ -339,7 +337,7 @@ function vpl_update_instance($instance) {
  * Deletes an instance by id
  *
  * @param int $id instance Id
- * @return boolean OK
+ * @return boolean True if deleted, false if not found
  */
 function vpl_delete_instance( $id ) {
     global $DB, $CFG;
@@ -402,7 +400,7 @@ function vpl_supports($feature) {
         case FEATURE_SHOW_DESCRIPTION:
             return true;
         case FEATURE_ADVANCED_GRADING:
-            return false;
+            return true;
         case FEATURE_CONTROLS_GRADE_VISIBILITY:
             return true;
         default:
@@ -416,9 +414,16 @@ function vpl_supports($feature) {
 }
 
 /**
- * Returns an object with short information about what a user has done with a given particular
- * instance of this module $return->time = the time they did it $return->info = a short text
- * description
+ * Return object with information of what a user has done in a VPL instance.
+ *
+ * Returns an object with time and info properties if the user has submitted,
+ * null otherwise.
+ *
+ * @param stdClass $course Course object
+ * @param stdClass $user User object
+ * @param stdClass $mod Course module object
+ * @param stdClass $instance VPL instance object
+ * @return stdClass|null Returns an info object
  */
 function vpl_user_outline($course, $user, $mod, $instance) {
     // Search submisions for $user $instance.
@@ -447,9 +452,12 @@ function vpl_user_outline($course, $user, $mod, $instance) {
 }
 
 /**
- * Prints a detailed report of what a user has done with a given particular instance of this
- * module
+ * Prints a detailed report of what a user has done in a VPL instance.
  *
+ * @param stdClass $course Course object
+ * @param stdClass $user User object
+ * @param stdClass $mod Course module object
+ * @param stdClass $vpl VPL instance object
  */
 function vpl_user_complete($course, $user, $mod, $vpl) {
     require_once('vpl_submission.class.php');
@@ -466,9 +474,17 @@ function vpl_user_complete($course, $user, $mod, $vpl) {
 }
 
 /**
- * @codeCoverageIgnore
- *
  * Returns all VPL submissions since a given time
+ *
+ * @param array $activities Array to append activities to
+ * @param int $index Current index in the activities array
+ * @param int $timestart Timestamp to start from
+ * @param int $courseid Course ID
+ * @param int $cmid Course module ID
+ * @param int $userid User ID (0 for all users)
+ * @param int $groupid Group ID (0 for all groups)
+ * @return bool True if activities were found, false otherwise
+ * @codeCoverageIgnore
  */
 function vpl_get_recent_mod_activity(&$activities, &$index, $timestart, $courseid, $cmid, $userid = 0, $groupid = 0) {
     global $CFG, $USER, $DB;
@@ -479,7 +495,7 @@ function vpl_get_recent_mod_activity(&$activities, &$index, $timestart, $coursei
     $vplid = $vpl->get_instance()->id;
     $grader = $vpl->has_capability( VPL_GRADE_CAPABILITY );
     if (! $vpl->is_visible() && ! $grader) {
-        return;
+        return false; // No activity if not visible and not grader.
     }
     $select = 'select * from {vpl_submissions} subs';
     $where = ' where (subs.vpl = :vplid) and ((subs.datesubmitted >= :timestartsub) or (subs.dategraded >= :timestartgrade))';
@@ -525,6 +541,14 @@ function vpl_get_recent_mod_activity(&$activities, &$index, $timestart, $coursei
 }
 
 /**
+ * Prints recent activity for a VPL module.
+ *
+ * @param stdClass $activity Activity object containing user, type, cmid, name, sectionnum, timestamp, and grade.
+ * @param int $courseid Course ID.
+ * @param bool $detail Whether to show detailed information.
+ * @param array $modnames Array of module names indexed by type.
+ * @param bool $viewfullnames Whether to show full names of users.
+ * @return void
  * @codeCoverageIgnore
  */
 function vpl_print_recent_mod_activity($activity, $courseid, $detail, $modnames, $viewfullnames) {
@@ -558,11 +582,10 @@ function vpl_print_recent_mod_activity($activity, $courseid, $detail, $modnames,
 }
 
 /**
- * @codeCoverageIgnore
- *
  * Get icon mapping for font-awesome.
  *
- * @return  array
+ * @return array
+ * @codeCoverageIgnore
  */
 function mod_vpl_get_fontawesome_icon_map() {
     return [
@@ -603,6 +626,7 @@ function mod_vpl_get_fontawesome_icon_map() {
             'mod_vpl:run' => 'fa-rocket',
             'mod_vpl:debug' => 'fa-bug',
             'mod_vpl:grade' => 'fa-check-circle',
+            'mod_vpl:gradenoun' => 'fa-check-circle',
             'mod_vpl:previoussubmissionslist' => 'fa-history',
             'mod_vpl:modulenameplural' => 'fa-list-ul',
             'mod_vpl:checkgroups' => 'fa-group',
@@ -629,6 +653,7 @@ function mod_vpl_get_fontawesome_icon_map() {
 
 /**
  * Creates e new navigation node with icon
+ *
  * @param navigation_node $vplnode
  * @param string $str string to be i18n
  * @param moodle_url $url
@@ -648,6 +673,12 @@ function vpl_navi_node_create(navigation_node $vplnode, $str, $url, $type = navi
 }
 
 /**
+ * Extends the navigation for VPL module.
+ *
+ * @param navigation_node $vplnode
+ * @param stdClass $course
+ * @param stdClass $module
+ * @param cm_info $cm
  * @codeCoverageIgnore
  */
 function vpl_extend_navigation(navigation_node $vplnode, $course, $module, $cm) {
@@ -710,6 +741,10 @@ function vpl_extend_navigation(navigation_node $vplnode, $course, $module, $cm) 
 }
 
 /**
+ * Extends the settings navigation for VPL module.
+ *
+ * @param settings_navigation $settings
+ * @param navigation_node $vplnode
  * @codeCoverageIgnore
  */
 function vpl_extend_settings_navigation(settings_navigation $settings, navigation_node $vplnode) {
@@ -808,6 +843,14 @@ function vpl_extend_settings_navigation(settings_navigation $settings, navigatio
     }
 }
 
+/**
+ * Extend the course navigation with VPL link.
+ *
+ * @param navigation_node $navigation
+ * @param stdClass $course
+ * @param context $context
+ * @codeCoverageIgnore
+ */
 function vpl_extend_navigation_course(navigation_node $navigation, $course, $context) {
     global $DB;
     $capability = has_capability(VPL_MANAGE_CAPABILITY, $context) ||
@@ -824,6 +867,11 @@ function vpl_extend_navigation_course(navigation_node $navigation, $course, $con
 }
 
 /**
+ * Checks if a scale is being used by a particular instance of VPL.
+ *
+ * @param int $vplid VPL instance ID
+ * @param int $scaleid Scale ID
+ * @return boolean True if the scale is used by the VPL instance, false otherwise
  * @codeCoverageIgnore
  */
 function vpl_scale_used($vplid, $scaleid) {
@@ -835,13 +883,13 @@ function vpl_scale_used($vplid, $scaleid) {
 }
 
 /**
- * @codeCoverageIgnore
+ * Checks if scale is being used by any instance of VPL.
  *
- * Checks if scale is being used by any instance of VPL. This is used to find out if scale
- * used anywhere
+ * This is used to find out if scale used anywhere
  *
- * @param $scaleid int
+ * @param int $scaleid Scale ID
  * @return boolean True if the scale is used by any VPL
+ * @codeCoverageIgnore
  */
 function vpl_scale_used_anywhere($scaleid) {
     global $DB;
@@ -849,6 +897,9 @@ function vpl_scale_used_anywhere($scaleid) {
 }
 
 /**
+ * Returns a list of actions that can be performed on a VPL view.
+ *
+ * @return array List of actions
  * @codeCoverageIgnore
  */
 function vpl_get_view_actions() {
@@ -872,6 +923,9 @@ function vpl_get_view_actions() {
 }
 
 /**
+ * Returns a list of actions that can be performed on a VPL post.
+ *
+ * @return array List of actions
  * @codeCoverageIgnore
  */
 function vpl_get_post_actions() {
@@ -890,12 +944,11 @@ function vpl_get_post_actions() {
 }
 
 /**
- * @codeCoverageIgnore
- *
  * Removes all grades from gradebook
  *
  * @param int $courseid
  * @param string $type optional
+ * @codeCoverageIgnore
  */
 function vpl_reset_gradebook($courseid, $type = '') {
     global $CFG;
@@ -919,79 +972,254 @@ function vpl_reset_instance_userdata($vplid) {
     global $CFG, $DB;
 
     // Delete submissions records.
-    $DB->delete_records( VPL_SUBMISSIONS, [
-            'vpl' => $vplid,
-    ] );
+    $paramselectingvpl = ['vpl' => $vplid];
+    $DB->delete_records( VPL_SUBMISSIONS, $paramselectingvpl );
     // Delete variations assigned.
-    $DB->delete_records( VPL_ASSIGNED_VARIATIONS, [
-            'vpl' => $vplid,
-    ] );
+    $DB->delete_records( VPL_ASSIGNED_VARIATIONS, $paramselectingvpl );
     // Delete overrides and associated events.
     $vpl = new mod_vpl(null, $vplid);
     $overrides = vpl_get_overrides($vplid);
     foreach ($overrides as $override) {
         $vpl->update_override_calendar_events($override, null, true);
     }
-    $DB->delete_records( VPL_ASSIGNED_OVERRIDES, [
-            'vpl' => $vplid,
-    ] );
+    $DB->delete_records( VPL_ASSIGNED_OVERRIDES, $paramselectingvpl );
 
     // Delete submission, execution and evaluation files.
     fulldelete( $CFG->dataroot . '/vpl_data/'. $vplid . '/usersdata' );
 }
 
 /**
+ * This function is used by the reset VPL submissions for reset course funcion.
+ *
+ * This function remove all submissions from the specified vpl instances
+ * and clean up any related data.
+ *
+ * @param string $vplselection with partial SQL to select VPL related records of a course.
+ * @param array $vplids vpl ids of a course
+ * @param int $courseid course id
+ * @return bool true if successful, false otherwise
  * @codeCoverageIgnore
- *
- * This function is used by the reset_course_userdata function in moodlelib. This function
- * will remove all submissions from the specified vpl instance and clean up any related data.
- *
- * @param $data stdClass the data submitted from the reset course.
- * @return array status array
  */
-function vpl_reset_userdata($data) {
-    $status = [];
-    if ($data->reset_vpl_submissions) {
-        $componentstr = get_string( 'modulenameplural', VPL );
-        if ($cms = get_coursemodules_in_course( VPL, $data->courseid )) {
-            foreach ($cms as $cm) { // For each vpl instance in course.
-                $vpl = new mod_vpl( $cm->id );
-                $instance = $vpl->get_instance();
-                $instancestatus = [
-                        'component' => $componentstr,
-                        'item' => get_string( 'resetvpl', VPL, $instance->name ),
-                        'error' => false,
-                ];
-                try {
-                    vpl_reset_instance_userdata($instance->id);
-                } catch (\Throwable $e) {
-                    $instancestatus['error'] = true;
-                }
-                $status[] = $instancestatus;
+function vpl_reset_submissions($vplselection, $vplids, $courseid): bool {
+    global $DB, $CFG;
+    try {
+        $DB->delete_records_select(VPL_SUBMISSIONS, $vplselection, [$courseid]);
+        $DB->delete_records_select(VPL_ASSIGNED_VARIATIONS, $vplselection, [$courseid]);
+        foreach ($vplids as $vplid) {
+            fulldelete( $CFG->dataroot . '/vpl_data/'. $vplid . '/usersdata' );
+        }
+        vpl_reset_gradebook($courseid);
+    } catch (\Throwable $e) {
+        debugging('Error reseting VPL submissions: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * This function is used by the reset VPL overrides by the reset course function.
+ *
+ * This function will remove all overrides from the specified vpl instances
+ * and clean up calendar events.
+ *
+ * @param string $vplselection with partial SQL to select VPL related records of a course.
+ * @param int $courseid course id
+ * @return bool true if successful, false otherwise
+ * @codeCoverageIgnore
+ */
+function vpl_reset_overrides($vplselection, $courseid): bool {
+    global $DB, $CFG;
+    $result = true;
+    try {
+        $overrides = vpl_get_overrides_incourse($courseid);
+        foreach ($overrides as $override) {
+            $vpl = new mod_vpl(null, $override->vpl);
+            try {
+                $vpl->update_override_calendar_events($override, null, true);
+            } catch (\Throwable $e) {
+                debugging('Error removing VPL overrides calendar events: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                $result = false;
             }
         }
+        $DB->delete_records_select(VPL_ASSIGNED_OVERRIDES, $vplselection, [$courseid]);
+        $DB->delete_records_select(VPL_OVERRIDES, $vplselection, [$courseid]);
+    } catch (\Throwable $e) {
+        debugging('Error reseting VPL overrides: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        $result = false;
+    }
+    return $result;
+}
+
+
+/**
+ * This function is used to reset VPL user data by the reset course function.
+ *
+ * This function remove all submissions from the specified vpl instance
+ * and clean up any related data.
+ *
+ * @param object $data the data submitted from the reset course.
+ * @return array status array
+ * @codeCoverageIgnore
+ */
+function vpl_reset_userdata($data) {
+    global $DB;
+    $vplselection = 'vpl IN (SELECT id FROM {vpl} WHERE course = ?)';
+    $courseparams = [$data->courseid];
+    $vplids = $DB->get_fieldset_select(VPL, 'id', 'course = ?', $courseparams);
+    $course = $DB->get_record('course', ['id' => $data->courseid], '*', MUST_EXIST);
+    $componentstr = get_string('modulenameplural', VPL);
+    $status = [];
+    if ($data->reset_vpl_submissions) {
+        $error = ! vpl_reset_submissions($vplselection, $vplids, $data->courseid);
+        $status[] = [
+            'component' => $componentstr,
+            'item' => get_string('resetvpl', VPL, $course->shortname),
+            'error' => $error,
+        ];
+    }
+    if ($data->reset_vpl_overrides) {
+        $error = ! vpl_reset_overrides($vplselection, $data->courseid);
+        $status[] = [
+            'component' => $componentstr,
+            'item' => get_string('removeoverrides', VPL),
+            'error' => $error,
+        ];
+    } else if ($data->reset_vpl_group_overrides || $data->reset_vpl_user_overrides) {
+        $error = false;
+        $overrides = vpl_get_overrides_incourse($course->id);
+        foreach ($overrides as $override) {
+            try {
+                $vpl = new mod_vpl(null, $override->vpl);
+                $newoverride = clone $override;
+                if ($data->reset_vpl_group_overrides) {
+                    $newoverride->groupids = '';
+                }
+                if ($data->reset_vpl_user_overrides) {
+                    $newoverride->userids = '';
+                }
+                $vpl->update_override_calendar_events($newoverride, $override);
+            } catch (\Throwable $e) {
+                debugging('Error updating VPL overrides calendar events after course reset: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                $error = true;
+            }
+        }
+        if ($data->reset_vpl_group_overrides) {
+            $selection = $vplselection . ' AND NOT (groupid IS NULL OR groupid = 0)';
+            $DB->delete_records_select(VPL_ASSIGNED_OVERRIDES, $selection, $courseparams);
+            $status[] = [
+                'component' => $componentstr,
+                'item' => get_string('removegroupoverrides', VPL),
+                'error' => $error,
+            ];
+        }
+        if ($data->reset_vpl_user_overrides) {
+            $selection = $vplselection . ' AND NOT (userid IS NULL OR userid = 0)';
+            $DB->delete_records_select(VPL_ASSIGNED_OVERRIDES, $selection, $courseparams);
+            $status[] = [
+                'component' => $componentstr,
+                'item' => get_string('removeuseroverrides', VPL),
+                'error' => $error,
+            ];
+        }
+    }
+
+    // Updating dates - shift may be negative too.
+    if ($data->timeshift != 0) {
+        // Shift dates in all vpl overrides in the course.
+        $error = false;
+        $overrides = vpl_get_overrides_incourse($course->id);
+        $params = ['timeshift' => $data->timeshift, 'courseid' => $data->courseid];
+        foreach (['startdate', 'duedate'] as $field) {
+            $sql = "UPDATE {vpl_overrides}
+                        SET $field = $field + :timeshift
+                        WHERE vpl IN (SELECT id FROM {vpl} WHERE course = :courseid)
+                              AND NOT ($field IS NULL OR $field = 0)";
+            $DB->execute($sql, $params);
+        }
+
+        $newoverrides = vpl_get_overrides_incourse($course->id);
+        foreach ($overrides as $override) {
+            try {
+                $vpl = new mod_vpl(null, $override->vpl);
+                if (isset($newoverrides[$override->id])) {
+                    $vpl->update_override_calendar_events($newoverrides[$override->id]);
+                } else {
+                    $vpl->update_override_calendar_events($override, null, true);
+                }
+            } catch (\Throwable $e) {
+                debugging('Error updating VPL overrides calendar events after time shifting: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                $error = true;
+            }
+        }
+
+        // Shift dates in all vpl instances in the course.
+        foreach (['startdate', 'duedate'] as $field) {
+            $sql = "UPDATE {vpl}
+                        SET $field = $field + :timeshift
+                        WHERE course = :courseid
+                              AND NOT ($field IS NULL OR $field = 0)";
+            $DB->execute($sql, $params);
+        }
+        mod_vpl::reset_db_cache();
+        $vplinstances = $DB->get_records_select(VPL, 'course = ?', [$data->courseid]);
+        foreach ($vplinstances as $vplinstance) {
+            try {
+                vpl_update_instance_event($vplinstance);
+            } catch (\Throwable $e) {
+                debugging('Error updating VPL calendar events after time shiting: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                $error = true;
+            }
+        }
+
+        $status[] = [
+                'component' => $componentstr,
+                'item' => get_string('timeshift', VPL, format_time($data->timeshift)),
+                'error' => $error,
+            ];
     }
     return $status;
 }
 
 /**
+ * Add the form elements that control VPL for the course reset functionality.
+ *
+ * @param moodleform $mform
  * @codeCoverageIgnore
- *
- * Implementation of the function for printing the form elements that control whether
- * the course reset functionality affects VPL.
- *
- * @param $mform moodleform passed by reference
  */
-function vpl_reset_course_form_definition(&$mform) {
-    $mform->addElement( 'header', 'vplheader', get_string( 'modulenameplural', VPL ) );
-    $mform->addElement( 'advcheckbox', 'reset_vpl_submissions', get_string( 'deleteallsubmissions', VPL ) );
+function vpl_reset_course_form_definition($mform) {
+    $mform->addElement('header', 'vplheader', get_string( 'modulenameplural', VPL));
+    $mform->addElement('static', 'reset_vpl_delete', get_string('delete'));
+    $mform->addElement('advcheckbox', 'reset_vpl_submissions',
+            get_string( 'removeallsubmissions', VPL));
+    $mform->addHelpButton('reset_vpl_submissions', 'removeallsubmissions', VPL);
+    $mform->addElement('advcheckbox', 'reset_vpl_overrides',
+            get_string('removeoverrides', VPL));
+    $mform->addHelpButton('reset_vpl_overrides', 'removeoverrides', VPL);
+    $mform->addElement('advcheckbox', 'reset_vpl_user_overrides',
+            get_string('removeuseroverrides', 'vpl'));
+    $mform->addHelpButton('reset_vpl_user_overrides', 'removeuseroverrides', VPL);
+    $mform->hideIf('reset_vpl_user_overrides', 'reset_vpl_overrides', 'checked');
+    $mform->addElement('advcheckbox', 'reset_vpl_group_overrides',
+            get_string('removegroupoverrides', 'vpl'));
+    $mform->addHelpButton('reset_vpl_group_overrides', 'removegroupoverrides', VPL);
+    $mform->hideIf('reset_vpl_group_overrides', 'reset_vpl_overrides', 'checked');
 }
 
 /**
- * @codeCoverageIgnore
- *
  * Course reset form defaults.
+ *
+ * This function is used by the reset_course_form in moodlelib.php to set the default values
+ * for the course reset form. It returns an array with the default values for the VPL
+ * reset options.
+ *
+ * @param stdClass $course The course object (Not used in this function).
+ * @codeCoverageIgnore
  */
 function vpl_reset_course_form_defaults($course) {
-    return ['reset_vpl_submissions' => 1];
+    return [
+        'reset_vpl_submissions' => 1,
+        'reset_vpl_overrides' => 1,
+        'reset_vpl_user_overrides' => 0,
+        'reset_vpl_group_overrides' => 0,
+    ];
 }

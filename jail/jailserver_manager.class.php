@@ -23,25 +23,55 @@
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
 
+defined('MOODLE_INTERNAL') || die();
+require_once( __DIR__ . '/../locallib.php');
+
 /**
  * vpl_jailserver_manager is a utility class to manage
  * the jail servers. get_Server is the main feature
  *
  */
-
-defined('MOODLE_INTERNAL') || die();
-require_once( __DIR__ . '/../locallib.php');
-
 class vpl_jailserver_manager {
+
+    /**
+     * Time in seconds to wait before rechecking a server.
+     * This is the time to wait before a server is considered down.
+     * If set to 0, it will not recheck the server.
+     *
+     * @var int
+     */
     const RECHECK = 300; // Optional setable?
+
+    /**
+     * Name of the table jailservers in the database.
+     *
+     * @var string
+     */
     const TABLE = 'vpl_jailservers';
 
+    /**
+     * Save last server version.
+     *
+     * @var string
+     */
     private static $lastserverversion = '';
 
+    /**
+     * Get the last server version.
+     *
+     * @return string Last server version
+     */
     public static function get_last_server_version() {
         return self::$lastserverversion;
     }
 
+    /**
+     * Parse headers from cURL response to get the server version.
+     *
+     * @param resource $ch cURL handle
+     * @param string $header Header string from the response
+     * @return int Length of the header string
+     */
     public static function parse_headers($ch, $header) {
         $parsed = explode(' ', $header);
         if (count($parsed) == 3 &&
@@ -51,6 +81,16 @@ class vpl_jailserver_manager {
         }
         return strlen($header);
     }
+
+    /**
+     * Get a cURL handle for the jail server.
+     *
+     * @param string $server URL of the jail server
+     * @param string $request Request to be sent
+     * @param bool $fresh If true, force a fresh connection
+     * @return resource cURL handle
+     * @throws Exception if cURL is not available
+     */
     public static function get_curl($server, $request, $fresh = false) {
         if (! function_exists( 'curl_init' )) {
             throw new Exception( 'PHP cURL required' );
@@ -81,13 +121,16 @@ class vpl_jailserver_manager {
         return $ch;
     }
 
+    /**
+     * Last JSONRPC id used.
+     *
+     * @var string
+     */
     static private $lastjsonrpcid = '';
 
     /**
      * Generate a new JSONRPC id.
      *
-     * @param string $method
-     * @param object $data
      * @return string
      */
     public static function generate_jsonrpcid() {
@@ -124,6 +167,15 @@ class vpl_jailserver_manager {
         return json_encode($rpcobject, JSON_UNESCAPED_UNICODE);
     }
 
+    /**
+     * Get the response from a jail server.
+     *
+     * @param string $server URL of the jail server
+     * @param string $request Request to be sent
+     * @param string $error Error message if any
+     * @param bool $fresh If true, force a fresh connection
+     * @return array|false Response from the jail server or false on error
+     */
     public static function get_response($server, $request, &$error = null, $fresh = false) {
         $ch = self::get_curl( $server, $request, $fresh );
         $rawresponse = curl_exec( $ch );
@@ -177,10 +229,10 @@ class vpl_jailserver_manager {
         return false;
     }
     /**
-     * Check if the server is tagged as down
+     * Check if the server is tagged as down.
      *
-     * @param string $server
-     * @return boolean
+     * @param string $server URL of the server
+     * @return boolean true if the server is checkable, false if it is down
      */
     private static function is_checkable(string $server) {
         global $DB;
@@ -197,10 +249,10 @@ class vpl_jailserver_manager {
     }
 
     /**
-     * Tag the server as down
+     * Tag the server as down.
      *
-     * @param string $server
-     * @param string $strerror
+     * @param string $server URL of the server
+     * @param string $strerror Error message to be stored
      * @return void
      */
     private static function server_fail(string $server, string $strerror) {
@@ -236,8 +288,7 @@ class vpl_jailserver_manager {
     /**
      * Return the defined server list
      *
-     * @param string $localserverlisttext=''
-     *            List of local server in text
+     * @param string $localserverlisttext List of local server in text
      * @return array of servers
      */
     public static function get_server_list(string $localserverlisttext) {
@@ -262,8 +313,9 @@ class vpl_jailserver_manager {
 
     /**
      * Returns action request XMLRPC or JSONRPC.
-     * @param string action
-     * @param object data
+     *
+     * @param string $action
+     * @param object $data
      * @return string
      */
     public static function get_action_request(string $action, object $data): string {
@@ -287,7 +339,7 @@ class vpl_jailserver_manager {
 
     /**
      * Returns available request XMLRPC or JSONRPC.
-     * @param int $maxmemory, required
+     * @param int $maxmemory Maximum memory in bytes for the request.
      * @return string
      */
     public static function get_available_request(int $maxmemory): string {
@@ -299,13 +351,13 @@ class vpl_jailserver_manager {
     /**
      * Return a valid server to be used, May tag some servers as faulty
      *
-     * @param int $maxmemory. Required
-     * @param string $localserverlisttext=''. List of local server in text.
-     * @param string $feedback. Info about jail servers response
+     * @param int $maxmemory Required
+     * @param string $localserverlisttext List of local server in text.
+     * @param ?string $feedback Info about jail servers response
      * @return string
      */
     public static function get_server(int $maxmemory, string $localserverlisttext = '',
-                                      string &$feedback = null): string {
+                                      ?string &$feedback = null): string {
         $serverlist = self::get_server_list( $localserverlisttext );
         shuffle( $serverlist );
         $requestready = self::get_available_request($maxmemory);
@@ -422,8 +474,7 @@ class vpl_jailserver_manager {
     /**
      * Return the https URL servers list
      *
-     * @param string $localserverlisttext=''
-     *            List of local server in text
+     * @param string $localserverlisttext List of local server in text, default ''
      * @return array of URLs
      */
     public static function get_https_server_list(string $localserverlisttext = ''): array {

@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with VPL for Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
  * Manage running tasks
  *
+ * @package mod_vpl
  * @copyright 2013 Juan Carlos Rodríguez-del-Pino
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
@@ -28,13 +28,15 @@ defined('MOODLE_INTERNAL') || die();
 require_once( __DIR__ . '/jailserver_manager.class.php');
 
 /**
- * Class that manage the Table of running processes.
- *
- * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
+ * Class that manages the persistence of running processes.
  */
-
 class vpl_running_processes {
+
+    /**
+     * @var string TABLE Name of the table running_processes in the database.
+     */
     const TABLE = 'vpl_running_processes';
+
     /**
      * Returns record of a running process (type run, debug or evaluate).
      *
@@ -61,7 +63,7 @@ class vpl_running_processes {
     /**
      * For a user and (optional) a VPL activity returns directruns.
      * @param int $userid
-     * @param (int|null) $vplid
+     * @param ?int $vplid
      * @return array processes records
      */
     public static function get_directrun(int $userid, ?int $vplid = null) {
@@ -89,7 +91,7 @@ class vpl_running_processes {
     /**
      * Adds a proccess information to the vpl_running_processes DB table.
      *
-     * @param Object $data {userid, server, vplid, adminticket}
+     * @param object $data {userid, server, vplid, adminticket}
      * @return int Process id in the DB table
      */
     public static function set(object $data) {
@@ -99,6 +101,13 @@ class vpl_running_processes {
         return $DB->insert_record( self::TABLE, $data );
     }
 
+    /**
+     * Deletes a process from the vpl_running_processes DB table.
+     *
+     * @param int $userid User id of the process.
+     * @param int $vplid VPL activity id of the process.
+     * @param ?string $adminticket Admin ticket of the process (optional).
+     */
     public static function delete(int $userid, int $vplid, ?string $adminticket = null) {
         global $DB;
         $parms = ['userid' => $userid, 'vpl' => $vplid];
@@ -122,7 +131,9 @@ class vpl_running_processes {
     }
 
     /**
-     * Cleans table removing old processes
+     * Cleans table removing old processes.
+     *
+     * @param int $timeout Time in seconds to consider a process as old.
      */
     public static function remove_old_processes(int $timeout) {
         global $DB;

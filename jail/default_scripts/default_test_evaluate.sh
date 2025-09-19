@@ -36,31 +36,78 @@ export evaluation_results='.vpl_evaluation_results.txt'
 export escaped_home_dir=$(echo $home_dir | sed "s/\//\\\\\//g")
 export vpl_evaluation_test_help='.vpl_evaluation_test_help'
 cat <<'FILE_END' >> "$home_dir/$vpl_evaluation_test_help"
--MANUAL: Testing Automatic Evaluation of a VPL Activity
-This guide walks you through the steps to configure tests to check the automated evaluation in a VPL activity.
-The aim of these checks is to test the automatic evaluation of different solutions and present the resultant outcomes.
-For accurate evaluation:
- * A correct solution to the problem must be present.
- * Several incorrect solutions should also be available.
- * If the activity has variations, then distinct solutions for each variation are required.
+-📘 Manual: Testing the Automatic Evaluation of a VPL Activity
+This guide describes how to configure test cases to validate the automatic evaluation system in a Virtual Programming Lab (VPL) activity.
+The purpose is to verify that the evaluation system correctly grades both correct and incorrect solutions, ensuring reliable automated assessment.
 
--Tests configuration
-For each solutions as a test case of the automatic evaluation, create a directory with the necessary files for that solution.
-The directory name should reflect: the type of solution (pass or fail), the specific name of the solution, and the expected grade mark (optional).
-The directory name should follow the format: [pass|fail]-solution name[-expected grade].
-Examples:
+-✅ Requirements for Reliable Evaluation
+To carry out a meaningful test of the evaluation logic:
+ * ✅ Include at least one correct solution to the activity.
+ * ❌ Provide several incorrect solutions, each demonstrating a specific type of failure (e.g., logic errors, runtime exceptions, infinite loops).
+ * 🧩 (Optional) If the activity uses variations, include corresponding solutions for each variation.
+
+🛠️
+
+-🗂️ Test Case Configuration
+Each test case must be placed in its own directory with a name that clearly indicates its purpose and expected result.
+
+-🏷️ Directory Naming Format
+Use the following format:
+>  [pass|fail]-<solution_name>[-<expected_grade>]
+
+* ✅ pass: A solution expected to be correct.
+* ❌ fail: A solution expected to fail or receive a low grade.
+* 📝 <solution_name>: A short, descriptive name of the scenario.
+* 🎯 <expected_grade>: Optional. The expected grade of the solution.
+
+-📂 Examples
 >  pass-Correct solution-10
->  fail-Output error-7
+>  fail-Output mismatch-3
 >  fail-Infinite loop-0
->  fail-Compilation errors
+>  fail-Compilation error
 
--Directory Structure
-Place all solution directories within the vpl_evaluation_tests directory.
-If there are variations in the activity, then within vpl_evaluation_tests, create separate directories for each variation, named after the specific variation identification. Each of these variation directories should contain the solutions pertinent to that variation.
+Each directory must contain the source code files of the solution to evaluate.
 
--Security Precautions
-VPL will automatically delete the vpl_evaluation_tests directory in any scenario other than the evaluation check.
-This measure ensures students cannot access the directory, safeguarding the integrity of the solutions.
+-🧱 Directory Structure
+Create a root folder named vpl_evaluation_tests.
+Place all test case directories inside it.
+Example structure:
+>  vpl_evaluation_tests/
+>  ├── pass-Correct solution-10/program.c
+>  ├── fail-Output mismatch-3/program.c
+>  ├── fail-Infinite loop-0/program.c
+>  └── fail-Compilation error/program.c
+
+If your activity includes variations, create a subdirectory within vpl_evaluation_tests for each variation. Name each subdirectory after the variation's identifier.
+>  vpl_evaluation_tests/
+>  └── variationA/
+>  │   ├── pass-Correct for variation A-10/program.c
+>  │   ├── fail-Output mismatch-3/program.c
+>  │   ├── fail-Infinite loop-0/program.c
+>  │   └── fail-Bad input handling-0/
+>  ├── variationB/
+>  │   ├── pass-Correct for variation B-10/program.c
+>  │   ├── fail-Output mismatch-3/program.c
+>  │   ├── fail-Infinite loop-0/program.c
+>  │   └── fail-Bad input handling-0/program.c
+>  ...
+
+-🚀 Running the Evaluation
+To run the test evaluation:
+ * 📄 Navigate to the "Execution files" page of the VPL activity.
+ * ▶️ Click the "Evaluate" button to start the process.
+This step must be performed manually by the instructor.
+
+-🔒 Security Measures
+VPL automatically deletes the vpl_evaluation_tests folder outside of evaluation mode to prevent students from accessing test cases.
+This ensures the integrity and confidentiality of your test solutions.
+
+-🕒 When to Use This
+Use this testing setup:
+ * 🧪 During initial development of a VPL activity.
+ * ⚙️ After modifying system settings, such as compiler or runtime updates.
+ * 🩺 When debugging or verifying changes in grading logic.
+
 FILE_END
 
 function add_error {
@@ -71,13 +118,28 @@ function add_error {
 }
 
 function copy_configuration {
+	# $1 The test case directory
+	# Replicate evaluation environment in a test case
+	# Copy all except the .vpl_evaluation_tests directory
+	local savedir=$(pwd)
 	local envfile="$1/vpl_environment.sh"
-	cp -a $home_dir/* "$1"
+	cd "$homedir"
+	(
+		shopt -s dotglob nullglob
+		for item in *; do
+			if [ -f "$item" ]; then
+				cp -a "$item" "$1/"
+			elif [ "$item" != "$test_dir" ]; then
+				cp -a "$item" "$1/"
+			fi
+		done
+	)
 	rm "$1/vpl_test_evaluate.sh"
 	[[ -s "$1/.localenvironment.sh" ]] && cat "$1/.localenvironment.sh" >> "$envfile"
 	[ ! -f "$envfile" ] && echo "#!/bin/bash" > "$envfile"
 	[ -n "$variation" ] && echo "export VPL_VARIATION=\"$variation\"" >> "$envfile"
 	chmod +x "$envfile"
+	cd "$savedir"
 }
 
 function compile_a_solution_test {
@@ -100,7 +162,7 @@ function compile_a_solution_test {
 		title="$title expected grade mark $test_mark"
 	fi
 	cd "$solution"
-	./vpl_evaluate.sh &> "$solution/$compilation_results"
+	./$VPL_EVALUATION_SCRIPT &> "$solution/$compilation_results"
 	# Check compilation results
 	if [ ! -x vpl_execution ] ; then
 		title="$title (Fail)"
@@ -148,9 +210,11 @@ function compile_solutions_tests {
 # Start running the compilation scripts.
 
 let ntest=0
-echo "━━━━ COMPILATION REPORT ━━━━"  >> "$home_dir/$compilation_results"
-echo "$star_symbol Using '$VPL_PLN' programming language (or custom code) to run solutions" >> "$home_dir/$compilation_results"
 if [[ -d "$home_dir/$oldtest_dir" ]] ; then
+	echo "⭐⭐ COMPILATION REPORT ⭐⭐"  >> "$home_dir/$compilation_results"
+	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"  >> "$home_dir/$compilation_results"
+	echo ""  >> "$home_dir/$compilation_results"
+	echo "$star_symbol Using '$VPL_PLN' programming language (or custom code) to run solutions" >> "$home_dir/$compilation_results"
 	mv "$home_dir/$oldtest_dir" "$home_dir/$test_dir"
 	if [[ "$VPL_VARIATIONS" != "" ]] ; then
 		for variation in ${VPL_VARIATIONS[@]} ; do
@@ -161,7 +225,7 @@ if [[ -d "$home_dir/$oldtest_dir" ]] ; then
 		compile_solutions_tests "$home_dir/$test_dir"
 	fi
 else
-	add_error "$bug_symbol The required directory $oldtest_dir doesn't exist."
+	add_error "$bug_symbol The required directory $oldtest_dir doesn't exist. Please, create it with the required test cases. Read the manual for more information."
 fi
 cp common_script.sh vpl_execution
 
@@ -279,8 +343,11 @@ fi
 if [ -s "$home_dir/$compilation_results" ] ; then
 	echo_VPL_file "$home_dir/$compilation_results"
 fi
-
-echo_line_VPL "━━━━ EVALUATION REPORT ━━━━"
+echo_line_VPL " "
+echo_line_VPL " "
+echo_line_VPL "⭐⭐ EVALUATION REPORT ⭐⭐"
+echo_line_VPL "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo_line_VPL " "
 
 let ntest=0
 let ntestfail=0
@@ -291,7 +358,7 @@ if [[ "$VPL_VARIATIONS" != "" ]] ; then
 else
 	run_solutions_tests "$home_dir/$test_dir"
 fi
-echo_line_VPL
+echo_line_VPL " "
 if [[ $ntestfail -gt 0 ]] ; then
 	echo_line_VPL "- $star_symbol Final report: $fail_symbol $ntestfail of $ntest tests failed."
 	global_mark=$VPL_GRADEMIN
@@ -299,7 +366,11 @@ else
 	echo_line_VPL "- $star_symbol Final report: $pass_symbol All $ntest tests passed."
 	global_mark=$VPL_GRADEMAX
 fi
-echo_line_VPL "━━━━ FULL EVALUATION REPORT ━━━━"
+echo_line_VPL " "
+echo_line_VPL " "
+echo_line_VPL "⭐⭐ FULL EVALUATION REPORT ⭐⭐"
+echo_line_VPL "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo_line_VPL " "
 cat "$home_dir/$evaluation_results"
 echo "Grade :=>>$global_mark"
 if [[ $global_mark = $VPL_GRADEMAX ]] ; then
@@ -310,4 +381,3 @@ fi
 SCRIPT_END
 
 chmod +x vpl_execution
-

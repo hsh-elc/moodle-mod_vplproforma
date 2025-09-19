@@ -18,7 +18,7 @@
  * Unit tests for mod/vpl/locallib.php.
  *
  * @package mod_vpl
- * @copyright  Juan Carlos RodrÃ­guez-del-Pino
+ * @copyright  Juan Carlos Rodrí­guez-del-Pino
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author Juan Carlos RodrÃ­guez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
@@ -35,10 +35,14 @@ require_once($CFG->dirroot . '/mod/vpl/locallib.php');
 
 /**
  * Unit tests for mod/vpl/locallib.php functions.
+ *
  * @group mod_vpl
+ * @group mod_vpl_locallib
  */
-class locallib_test extends \advanced_testcase {
+final class locallib_test extends \advanced_testcase {
     /**
+     * Tests the function vpl_delete_dir.
+     *
      * @covers \vpl_delete_dir
      */
     public function test_vpl_delete_dir(): void {
@@ -66,10 +70,20 @@ class locallib_test extends \advanced_testcase {
         $this->assertFalse(file_exists($testdir) && is_dir($testdir),  $testdir);
     }
 
+    /**
+     * Helper method to test vpl_fopen.
+     *
+     * @param string $path The path to the file.
+     * @param string $text The text to write to the file.
+     * @return void
+     */
     public function internal_test_vpl_fopen($path, $text = 'Example text') {
         global $CFG;
         $testdir = $CFG->dataroot . '/temp/vpl_test/tmp';
         $fpath = $testdir . $path;
+        if (file_exists($fpath) && is_dir($fpath)) {
+            $this->expectedNotice();
+        };
         $fp = vpl_fopen($fpath);
         $this->assertNotNull( $fp );
         fwrite($fp, $text);
@@ -78,6 +92,8 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_fopen.
+     *
      * @covers \vpl_fopen
      */
     public function test_vpl_fopen(): void {
@@ -91,7 +107,7 @@ class locallib_test extends \advanced_testcase {
         $fpath = $testdir . '/nf.bbb';
         chmod($fpath, 0000);
         try {
-            if (file_get_contents($fpath) == $text) {
+            if (@file_get_contents($fpath) == $text) {
                 $chmodusefull = false;
             } else {
                 $chmodusefull = true;
@@ -134,9 +150,11 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_get_array_key.
+     *
      * @covers \vpl_get_array_key
      */
-    public function tes_vpl_get_array_key() {
+    public function test_vpl_get_array_key(): void {
         $array = [0 => 'nothing', 1 => 'a', 2 => 'b', 5 => 'c', 1200 => 'd', 1500 => 'f'];
         $this->assertEquals(1, vpl_get_array_key($array, 1));
         $this->assertEquals(2, vpl_get_array_key($array, 2));
@@ -151,6 +169,8 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_fwrite.
+     *
      * @covers \vpl_fwrite
      */
     public function test_vpl_fwrite(): void {
@@ -169,7 +189,7 @@ class locallib_test extends \advanced_testcase {
         // Tests if the File System honor chmod.
         chmod($fpath, 0000);
         try {
-            if (file_get_contents($fpath) == $otext) {
+            if (@file_get_contents($fpath) == $otext) {
                 $chmodusefull = false;
             } else {
                 $chmodusefull = true;
@@ -218,6 +238,8 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_get_set_session_var.
+     *
      * @covers \vpl_get_set_session_var
      */
     public function test_vpl_get_set_session_var(): void {
@@ -257,6 +279,8 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_is_image.
+     *
      * @covers \vpl_is_image
      */
     public function test_vpl_is_image(): void {
@@ -277,6 +301,8 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_truncate_string.
+     *
      * @covers \vpl_truncate_string
      */
     public function test_vpl_truncate_string(): void {
@@ -301,18 +327,22 @@ class locallib_test extends \advanced_testcase {
     }
 
     /**
+     * Tests the function vpl_bash_export.
+     *
      * @covers \vpl_bash_export
      */
     public function test_vpl_bash_export(): void {
         $this->assertEquals("export VPL=3\n", vpl_bash_export('VPL', 3));
-        $this->assertEquals("export ALGO=\"text\"\n", vpl_bash_export('ALGO', 'text'));
-        $this->assertEquals("export ALGO=\"te\\\" \$'xt\"\n", vpl_bash_export('ALGO', 'te" $\'xt'));
-        $this->assertEquals("export ALGO=\"te''xt'\"\n", vpl_bash_export('ALGO', "te''xt'"));
+        $this->assertEquals("export ALGO='text'\n", vpl_bash_export('ALGO', 'text'));
+        $this->assertEquals("export ALGO='te\" \$'\\''xt'\n", vpl_bash_export('ALGO', 'te" $\'xt'));
+        $this->assertEquals("export ALGO='te'\\'''\\''xt'\\'''\n", vpl_bash_export('ALGO', "te''xt'"));
         $res = vpl_bash_export('a', [ "te''xt'", 'te" $\'xt']);
-        $this->assertEquals("export a=( \"te''xt'\" \"te\\\" \$'xt\" )\n", $res);
+        $this->assertEquals("export a=( 'te'\\'''\\''xt'\\''' 'te\" \$'\\''xt' )\n", $res);
     }
 
     /**
+     * Tests the function vpl_is_valid_file_name.
+     *
      * @covers \vpl_is_valid_file_name
      */
     public function test_vpl_is_valid_file_name(): void {

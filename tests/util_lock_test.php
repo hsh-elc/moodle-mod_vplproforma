@@ -34,8 +34,13 @@ require_once(dirname(__FILE__).'/../locallib.php');
  * @group mod_vpl
  * @covers \mod_vpl\util\lock
  */
-class util_lock_test extends \advanced_testcase {
+final class util_lock_test extends \advanced_testcase {
 
+    /**
+     * Base directory for test locks
+     *
+     * @var string
+     */
     private $basedir;
 
     /**
@@ -43,6 +48,7 @@ class util_lock_test extends \advanced_testcase {
      */
     protected function setUp(): void {
         global $CFG;
+        parent::setUp();
         $this->basedir = $CFG->dataroot . '/vpl_data/locktest';
         $this->assertTrue(mkdir($this->basedir, 0777, true));
     }
