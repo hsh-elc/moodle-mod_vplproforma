@@ -17,8 +17,8 @@ use core\exception\invalid_state_exception;
 /**
  * Hard-coded repo owner and name, so that modified HTTP data won't download data from anywhere
  */
-define('VPL_PROFORMA_INTEGRATION_REPO_OWNER', 'levipalait');
-define('VPL_PROFORMA_INTEGRATION_REPO_NAME', 'release-test'); // TODO: Change Repo Owner and Name. This right now is only for testing!!!
+define('VPL_PROFORMA_INTEGRATION_REPO_OWNER', 'hsh-elc');
+define('VPL_PROFORMA_INTEGRATION_REPO_NAME', 'vpl-grappa-integration');
 define('PROFORMA_SETTINGS_SHELL_FILENAME', 'proforma_settings.sh');
 
 /**
