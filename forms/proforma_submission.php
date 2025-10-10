@@ -3,7 +3,6 @@ require_once(dirname(__FILE__).'/../../../config.php');
 require_once(dirname(__FILE__).'/../locallib.php');
 require_once(dirname(__FILE__).'/../vpl.class.php');
 require_once(dirname(__FILE__).'/../classes/proforma/file_manager.php');
-require_once(dirname(__FILE__).'/../classes/proforma/form_options.php');
 require_once(dirname(__FILE__).'/../classes/proforma/release_fetcher.php');
 require_once(dirname(__FILE__).'/../classes/proforma/task_doc.php');
 global $CFG;
@@ -19,11 +18,13 @@ use core\exception\invalid_state_exception;
  */
 define('VPL_PROFORMA_INTEGRATION_REPO_OWNER', 'hsh-elc');
 define('VPL_PROFORMA_INTEGRATION_REPO_NAME', 'vpl-grappa-integration');
-define('PROFORMA_SETTINGS_SHELL_FILENAME', 'proforma_settings.sh');
+
+define('VPL_PROFORMA_RELEASE_VERSION_FILENAME', 'vpl_proforma_integration_version.txt');
 
 /**
  * Form elements
  */
+define('PROFORMA_SETTINGS_RELEASE_SELECTOR_ELEM', 'proformasettingsreleaseselect');
 define('PROFORMA_TASK_FILE_UPLOAD_ELEM', 'proformataskfileupload');
 define('PROFORMA_SAVE_BUTTON', 'proformasaveoptionsbutton');
 
@@ -49,8 +50,8 @@ class mod_vpl_proforma_submission_form extends moodleform {
         $mform->addElement('header', 'teacherguideheader', get_string('teacherguideheader', VPL));
         $mform->setExpanded('teacherguideheader', true);
         $mform->addElement('static', 'teacherguideselectrelease', get_string('teacherguideselectrelease:title', VPL), get_string('teacherguideselectrelease:text', VPL));
-        $mform->addElement('static', 'teacherguideconfiguregrader', get_string('teacherguideconfiguregrader:title', VPL), get_string('teacherguideconfiguregrader:text', VPL));
         $mform->addElement('static', 'teacherguideuploadtask', get_string('teacherguideuploadtask:title', VPL), get_string('teacherguideuploadtask:text', VPL));
+        $mform->addElement('static', 'teacherguideconfiguregrader', get_string('teacherguideconfiguregrader:title', VPL), get_string('teacherguideconfiguregrader:text', VPL));
         $mform->addElement('static', 'teacherguidesummary', get_string('teacherguidesummary:title', VPL), get_string('teacherguidesummary:text', VPL));
 
         // Download VPL-ProFormA-Release
@@ -59,45 +60,6 @@ class mod_vpl_proforma_submission_form extends moodleform {
         $mform->addElement('select', PROFORMA_SETTINGS_RELEASE_SELECTOR_ELEM, get_string('releaseselect', VPL), $this->releasefetcher->get_release_names());
         $mform->addHelpButton(PROFORMA_SETTINGS_RELEASE_SELECTOR_ELEM, 'releaseselect', VPL);
 
-        // ProFormA grader settings
-        $mform->addElement('header', 'proformasettingsheader', get_string('gradersettingsheader', VPL));
-        $mform->setExpanded('proformasettingsheader', true);
-
-        $mform->addElement('text', PROFORMA_SETTINGS_SERVICE_URL_ELEM, get_string('serviceurl', VPL));
-        $mform->addHelpButton(PROFORMA_SETTINGS_SERVICE_URL_ELEM, 'serviceurl', VPL);
-        $mform->setType(PROFORMA_SETTINGS_SERVICE_URL_ELEM, PARAM_URL);
-
-        $mform->addElement('text', PROFORMA_SETTINGS_LMS_ID_ELEM, get_string('lmsid', VPL));
-        $mform->addHelpButton(PROFORMA_SETTINGS_LMS_ID_ELEM, 'lmsid', VPL);
-        $mform->setType(PROFORMA_SETTINGS_LMS_ID_ELEM, PARAM_TEXT);
-
-        $mform->addElement('passwordunmask', PROFORMA_SETTINGS_LMS_PASSWORD_ELEM, get_string('lmspassword', VPL));
-        $mform->addHelpButton(PROFORMA_SETTINGS_LMS_PASSWORD_ELEM, 'lmspassword', VPL);
-
-        $mform->addElement('select', PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_ELEM, get_string('acceptselfsigned', VPL), PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_SELECT_OPTIONS);
-        $mform->addHelpButton(PROFORMA_SETTINGS_ACCEPT_SELF_SIGNED_ELEM, 'acceptselfsigned', VPL);
-
-        $mform->addElement('text', PROFORMA_SETTINGS_GRADER_NAME_ELEM, get_string('gradername', VPL));
-        $mform->addHelpButton(PROFORMA_SETTINGS_GRADER_NAME_ELEM, 'gradername', VPL);
-        $mform->setType(PROFORMA_SETTINGS_GRADER_NAME_ELEM, PARAM_TEXT);
-
-        $mform->addElement('text', PROFORMA_SETTINGS_GRADER_VERSION_ELEM, get_string('graderversion', VPL));
-        $mform->addHelpButton(PROFORMA_SETTINGS_GRADER_VERSION_ELEM, 'graderversion', VPL);
-        $mform->setType(PROFORMA_SETTINGS_GRADER_VERSION_ELEM, PARAM_TEXT);
-
-        $mform->addElement('select', PROFORMA_SETTINGS_FEEDBACK_FORMAT_ELEM, get_string('feedbackformat', VPL), PROFORMA_SETTINGS_FEEDBACK_FORMAT_SELECT_OPTIONS);
-        $mform->addHelpButton(PROFORMA_SETTINGS_FEEDBACK_FORMAT_ELEM, 'feedbackformat', VPL);
-
-        $mform->addElement('select', PROFORMA_SETTINGS_FEEDBACK_STRUCTURE_ELEM, get_string('feedbackstructure', VPL), PROFORMA_SETTINGS_FEEDBACK_STRUCTURE_SELECT_OPTIONS);
-        $mform->addHelpButton(PROFORMA_SETTINGS_FEEDBACK_STRUCTURE_ELEM, 'feedbackstructure', VPL);
-
-        $mform->addElement('select', PROFORMA_SETTINGS_STUDENT_FEEDBACK_ELEM, get_string('studentfeedbacklevel', VPL), PROFORMA_SETTINGS_FEEDBACK_LEVEL_SELECT_OPTIONS);
-        $mform->addHelpButton(PROFORMA_SETTINGS_STUDENT_FEEDBACK_ELEM, 'studentfeedbacklevel', VPL);
-        $mform->setDefault(PROFORMA_SETTINGS_STUDENT_FEEDBACK_ELEM, 1);
-
-        $mform->addElement('select', PROFORMA_SETTINGS_TEACHER_FEEDABCK_ELEM, get_string('teacherfeedbacklevel', VPL), PROFORMA_SETTINGS_FEEDBACK_LEVEL_SELECT_OPTIONS);
-        $mform->addHelpButton(PROFORMA_SETTINGS_TEACHER_FEEDABCK_ELEM, 'teacherfeedbacklevel', VPL);
-
         // ProFormA task file
         $mform->addElement('header', 'taskfile', get_string('proformataskfile', VPL));
         $mform->setExpanded('taskfile', true);
@@ -105,8 +67,11 @@ class mod_vpl_proforma_submission_form extends moodleform {
             null, array('subdirs' => 0, 'maxbytes' => $COURSE->maxbytes, 'maxfiles' => 1));
         $mform->addHelpButton(PROFORMA_TASK_FILE_UPLOAD_ELEM, 'proformataskfile', VPL);
 
+        // User data deletion warning
+        $mform->addElement('static', 'userdatadeletionwarning', '', get_string('userdatadeletionwarning', VPL));
+
         // Submit Button
-        $mform->addElement( 'submit', PROFORMA_SAVE_BUTTON, get_string('submitproformatask', VPL));
+        $mform->addElement('submit', PROFORMA_SAVE_BUTTON, get_string('submitproformatask', VPL));
     }
 
     public function get_release_fetcher(): proforma_release_fetcher {
@@ -138,7 +103,6 @@ if (isset($fromform->{PROFORMA_SAVE_BUTTON})) {
  * Entry-Point after 'Save' is clicked
  */
 function setup_proforma_task(mod_vpl $vpl, mod_vpl_proforma_submission_form $mform): void {
-    $formoptions = new proforma_form_options($mform->get_data());
     $releasefetcher = $mform->get_release_fetcher();
     $filemgr = new proforma_file_manager($vpl);
 
@@ -178,14 +142,13 @@ function setup_proforma_task(mod_vpl $vpl, mod_vpl_proforma_submission_form $mfo
 
     // Download release assets
     $releases = $releasefetcher->get_release_names();
-    $selectedrelease = $formoptions->get_selected_release($releases);
+    $releaseindex = $mform->get_data()->{PROFORMA_SETTINGS_RELEASE_SELECTOR_ELEM};
+    $selectedrelease = set_string_in_array_or_throw($releaseindex, $releases);
+
     $assets = $releasefetcher->get_release_assets($selectedrelease);
 
     foreach ($assets as $asset) {
         $assetfilecontent = download_file($asset['url']);
-        if ($asset['name'] === PROFORMA_SETTINGS_SHELL_FILENAME) {
-            $assetfilecontent = $formoptions->format_proforma_settings_shell_file($assetfilecontent);
-        }
         $filemgr->add_execution_file($asset['name'], $assetfilecontent, true);
     }
 
@@ -196,7 +159,7 @@ function setup_proforma_task(mod_vpl $vpl, mod_vpl_proforma_submission_form $mfo
     // Clear course cache, so changes will be present on reload
     rebuild_course_cache($instance->course, true);
     // Redirect user to execution options page
-    vpl_inmediate_redirect(vpl_mod_href('forms/executionoptions.php', 'id', $vpl->get_course_module()->id));
+    vpl_inmediate_redirect(vpl_mod_href('forms/executionfiles.php', 'id', $vpl->get_course_module()->id));
 }
 
 /**
@@ -318,4 +281,33 @@ function download_file(string $url): string {
         throw new invalid_state_exception('Download failed: HTTP status ' . $info['http_code'] . ' for URL ' . $url);
     }
     return $response;
+}
+
+/**
+ * Checks if a value is a non-empty string and returns it if true
+ * Returns an invalid_parameter_exception if the value isn't a non-empty string
+ */
+function set_string_or_throw(mixed $value): string {
+    if (isset($value) && is_string($value) && $value !== '') {
+        return $value;
+    } else {
+        throw new invalid_parameter_exception('Expected non-empty string. Found "' . $value . '"');
+    }
+}
+
+/**
+ * Cheks if a value is a non-empty string that is contained as key in $array
+ */
+function set_string_in_array_or_throw(mixed $key, array $array): string {
+    $index = set_string_or_throw($key);
+    if (array_key_exists($index, $array)) {
+        $result = $array[$index];
+        if (is_string($result)) {
+            return $result;
+        } else {
+            throw new invalid_state_exception('Array should contain strings. Found "' . $result . '"');
+        }
+    } else {
+        throw new invalid_parameter_exception('Expected non-empty string that is contained in array' . $array);
+    }
 }

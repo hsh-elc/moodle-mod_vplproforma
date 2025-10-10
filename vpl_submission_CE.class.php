@@ -435,8 +435,7 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
             }
         }
         $data->userid = $this->get_instance()->userid;
-        $data->courseid = $this->vpl->get_course()->id;
-        $data->groupid = $this->get_instance()->userid;
+        $data->groupid = $this->get_instance()->groupid;
         $data->submittedlist = $submittedlist;
         return $data;
     }
@@ -561,16 +560,12 @@ class mod_vpl_submission_CE extends mod_vpl_submission {
         $variables['MOODLE_ACTIVITY_ID'] = $vpl->get_course_module()->id;
         if (isset($data->userid)) {
             $userid = $data->userid;
-            $courseid = $data->courseid;
-            $info .= vpl_bash_export('MOODLE_USER_ID',  $userid);
-            $info .= vpl_bash_export('MOODLE_COURSE_ID',  $courseid);
             $variables['MOODLE_USER_ID'] = $userid;
             if ($user = $DB->get_record('user', ['id' => $userid])) {
                 $variables['MOODLE_USER_NAME'] = $vpl->fullname($user, false);
                 $variables['MOODLE_USER_EMAIL'] = $user->email;
             }
         }
-        $info .= vpl_bash_export('MOODLE_URL',  new \moodle_url('/'));
         if ($vpl->is_group_activity() && isset($data->groupid)) {
             $groupid = $data->groupid;
             if ($group = $DB->get_record('groups', ['id' => $groupid])) {

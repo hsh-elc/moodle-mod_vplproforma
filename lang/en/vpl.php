@@ -32,8 +32,6 @@ $string['acceptcertificatesnote'] = "<p>You are using an encrypted connection.<p
 <p>To use an encrypted connection with the execution servers it is required you accept its certificates.</p>
 <p>If you have problems with this process, you can try to use a http (unencrypted) connection or other browser.</p>
 <p>Please, click on the following links (server #) and accept the offered certificate.</p>";
-$string['acceptselfsigned'] = 'Accept self signed certificates';
-$string['acceptselfsigned_help'] = 'Should a connection to the web service be established if it uses self-signed TLS certificates? (Default: No)';
 $string['addfile'] = 'Add file';
 $string['addoverride'] = 'Add an override';
 $string['advanced'] = 'Advanced';
@@ -182,10 +180,6 @@ $string['executionoptions_help'] = '<p>Various execution options are set in this
 <li><b>Evaluate upon files submission</b>: the submission is evaluated automatically when it is uploaded.</li>
 <li><b>Automatic grading</b>: if the evaluation result includes grading codes, they are used to set the grade automatically.</li>
 </ul>';
-$string['feedbackformat'] = 'Feedback format';
-$string['feedbackformat_help'] = 'Should the grading feedback be sent as zip or xml? (Default: zip)';
-$string['feedbackstructure'] = 'Feedback structure';
-$string['feedbackstructure_help'] = 'Which feedback structure (separate or merged test feedback) should be sent back? (Default: separate-test-feedback)';
 $string['file'] = 'File';
 $string['fileNotChanged'] = 'File has not changed';
 $string['file_name'] = 'File name';
@@ -232,11 +226,6 @@ $string['gradeoptions'] = 'Grade options';
 $string['grader'] = "Evaluator";
 $string['gradercomments'] = 'Assessment report';
 $string['graderemoved'] = 'The grade has been removed';
-$string['gradername'] = 'Grader name';
-$string['gradername_help'] = 'Name of the grader as it is configured on the web service';
-$string['gradersettingsheader'] = 'ProFormA grader settings';
-$string['graderversion'] = 'Grader version';
-$string['graderversion_help'] = 'Version of the grader as it is configured on the web service';
 $string['gradesaved'] = 'Grade saved';
 $string['gradesaved_redirect'] = 'Grade saved. This page should redirect automatically.';
 $string['groupwork'] = 'Group work';
@@ -274,10 +263,6 @@ $string['listofcomments'] = 'List of comments';
 $string['lists'] = 'Lists';
 $string['listsimilarity'] = 'List of similarities found';
 $string['listwatermarks'] = 'Water marks list';
-$string['lmsid'] = 'LMS ID';
-$string['lmsid_help'] = 'LMS ID used to connect to the web service';
-$string['lmspassword'] = 'LMS password';
-$string['lmspassword_help'] = 'Password for the provided LMS ID';
 $string['load'] = 'Load';
 $string['loading'] = 'Loading';
 $string['local_jail_servers'] = 'Local execution servers';
@@ -528,8 +513,6 @@ $string['select_all'] = 'Select all';
 $string['selectbreakpoint'] = 'Select breakpoint';
 $string['server'] = 'Server';
 $string['serverexecutionerror'] = 'Server execution error';
-$string['serviceurl'] = 'Service URL';
-$string['serviceurl_help'] = 'URL of the web service that connects the graders';
 $string['setbyexecutionoptions'] = 'set by execution options';
 $string['shortcuts'] = 'Keyboard shortcuts';
 $string['shortdescription'] = 'Short description';
@@ -543,8 +526,6 @@ $string['startdate'] = 'Available from';
 $string['starting'] = 'Starting';
 $string['step'] = 'Step';
 $string['stop'] = 'Stop';
-$string['studentfeedbacklevel'] = 'Student feedback level';
-$string['studentfeedbacklevel_help'] = 'The level of feedback that a student should receive after a grading (Default: info)';
 $string['submission'] = 'Submission';
 $string['submissionperiod'] = 'Submission period';
 $string['submissionrestrictions'] = 'Submission restrictions';
@@ -562,30 +543,28 @@ $string['submissionview'] = 'Submission view';
 $string['submitarchive'] = 'Submit archive';
 $string['submitfiles'] = 'Submit files';
 $string['submitmethod'] = 'Submit method';
-$string['submitproformatask'] = 'Submit and return to Execution options';
+$string['submitproformatask'] = 'Submit and return to Execution Files';
 $string['submittedby'] = 'Submitted by {$a}';
 $string['submittedon'] = 'Submitted on';
 $string['submittedonp'] = 'Submitted on {$a}';
 $string['subplugintype_vplevaluator'] = 'VPL submissions evaluator';
 $string['subplugintype_vplevaluator_plural'] = 'VPL submissions evaluators';
 $string['sureresetfiles'] = 'Do you want to lost all your work and reset the files to its original state?';
-$string['teacherfeedbacklevel'] = 'Teacher feedback level';
-$string['teacherfeedbacklevel_help'] = 'The level of feedback that a teacher should receive after a grading (Default: debug)';
 $string['teacherguideconfiguregrader:text'] = 
 'The VPL-ProFormA-Integration needs information about the web service and grader that should be used for grading submissions.<br>
-This can be submitted through the ProFormA grader settings in this form. Each input element has a help-button that displays further information.';
-$string['teacherguideconfiguregrader:title'] = '2. Configure grader';
+This can be configured through the ProFormA grader settings in the proforma_settings.sh file, which can be opened in the Execution Files tab after pressing "Submit and return to Execution options".';
+$string['teacherguideconfiguregrader:title'] = '3. Configure grader';
 $string['teacherguideheader'] = 'Teacher guide';
 $string['teacherguideselectrelease:text'] = 
 'To use VPL alongside a ProFormA task, you need to download the VPL-ProFormA-Integration from GitHub and add it to the Execution Files tab.<br>
 This can be done automatically by just selecting the desired release in the dropdown-menu.';
 $string['teacherguideselectrelease:title'] = '1. Select release';
-$string['teacherguidesummary:text'] = 'After pressing "Submit and return to Execution options", the current VPL activity is automatically configured for grading submissions with a ProFormA compatible grader.';
+$string['teacherguidesummary:text'] = 'After the proforma_settings.sh file has been configured, the grading of this VPL activity is achieved using a ProFormA compatible grader.';
 $string['teacherguidesummary:title'] = '4. Done.';
 $string['teacherguideuploadtask:text'] = 
 'A ProFormA task.xml file is required. This can be uploaded in the ProFormA task file section alongside other files.<br>
 The task.xml file can be dropped separately in the file upload menu or multiple files can be uploaded as a zip file. The zip must also contain the task.xml file.';
-$string['teacherguideuploadtask:title'] = '3. Upload task';
+$string['teacherguideuploadtask:title'] = '2. Upload task';
 $string['test'] = 'Test activity';
 $string['testcases'] = 'Test cases';
 $string['testcases_help'] = 'This feature allows to run the student program and check its output for a given input. To set up the evaluation cases you must populate the file &quot;vpl_evaluate.cases&quot;.<br>
@@ -620,6 +599,7 @@ $string['updating'] = 'Updating';
 $string['uploadfile'] = 'Upload file';
 $string['use_xmlrpc'] = 'Use XML-RPC';
 $string['use_xmlrpc_description'] = 'If set, the system will use the old XML-RPC protocol instead of JSON-RPC to communicate with the vpl-jail-servers. Set this option if you are using a vpl-jail-servers with a version previous to V3.0.0.';
+$string['userdatadeletionwarning'] = '<i class="fa fa-exclamation-triangle text-warning"></i> Warning: After pressing the submit button, all existing user submissions will be deleted, if there are any. This form is supposed to only be submitted once for setting up the VPL activity.';
 $string['usevariations'] = 'Use variations';
 $string['usewatermarks'] = 'Use watermarks';
 $string['usewatermarks_description'] = 'Adds watermarks to student\'s files (only to supported languages)';
