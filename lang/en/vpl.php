@@ -543,7 +543,7 @@ $string['submissionview'] = 'Submission view';
 $string['submitarchive'] = 'Submit archive';
 $string['submitfiles'] = 'Submit files';
 $string['submitmethod'] = 'Submit method';
-$string['submitproformatask'] = 'Submit and return to Execution Files';
+$string['submitproformatask'] = 'Submit and switch to Execution Files';
 $string['submittedby'] = 'Submitted by {$a}';
 $string['submittedon'] = 'Submitted on';
 $string['submittedonp'] = 'Submitted on {$a}';
@@ -552,7 +552,7 @@ $string['subplugintype_vplevaluator_plural'] = 'VPL submissions evaluators';
 $string['sureresetfiles'] = 'Do you want to lost all your work and reset the files to its original state?';
 $string['teacherguideconfiguregrader:text'] = 
 'The VPL-ProFormA-Integration needs information about the web service and grader that should be used for grading submissions.<br>
-This can be configured through the ProFormA grader settings in the proforma_settings.sh file, which can be opened in the Execution Files tab after pressing "Submit and return to Execution options".';
+This can be configured through the ProFormA grader settings in the proforma_settings.sh file, which can be opened in the Execution Files tab after pressing "Submit and switch to Execution Files".';
 $string['teacherguideconfiguregrader:title'] = '3. Configure grader';
 $string['teacherguideheader'] = 'Teacher guide';
 $string['teacherguideselectrelease:text'] = 
@@ -599,7 +599,7 @@ $string['updating'] = 'Updating';
 $string['uploadfile'] = 'Upload file';
 $string['use_xmlrpc'] = 'Use XML-RPC';
 $string['use_xmlrpc_description'] = 'If set, the system will use the old XML-RPC protocol instead of JSON-RPC to communicate with the vpl-jail-servers. Set this option if you are using a vpl-jail-servers with a version previous to V3.0.0.';
-$string['userdatadeletionwarning'] = '<i class="fa fa-exclamation-triangle text-warning"></i> Warning: After pressing the submit button, all existing user submissions will be deleted, if there are any. This form is supposed to only be submitted once for setting up the VPL activity.';
+$string['userdatadeletionwarning'] = '<i class="fa fa-exclamation-triangle text-warning"></i> Warning: After pressing the "Submit and switch to Execution Files" button, all existing user submissions will be deleted, if there are any. This form is supposed to only be submitted once for setting up the VPL activity.';
 $string['usevariations'] = 'Use variations';
 $string['usewatermarks'] = 'Use watermarks';
 $string['usewatermarks_description'] = 'Adds watermarks to student\'s files (only to supported languages)';
