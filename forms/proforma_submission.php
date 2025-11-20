@@ -13,13 +13,13 @@ use core\context\user;
 use core\exception\invalid_parameter_exception;
 use core\exception\invalid_state_exception;
 
+define('PROFORMA_SETTINGS_FILENAME', 'proforma_settings.sh');
+
 /**
  * Hard-coded repo owner and name, so that modified HTTP data won't download data from anywhere
  */
 define('VPL_PROFORMA_INTEGRATION_REPO_OWNER', 'hsh-elc');
 define('VPL_PROFORMA_INTEGRATION_REPO_NAME', 'vpl-grappa-integration');
-
-define('VPL_PROFORMA_RELEASE_VERSION_FILENAME', 'vpl_proforma_integration_version.txt');
 
 /**
  * Form elements
@@ -118,7 +118,8 @@ function setup_proforma_task(mod_vpl $vpl, mod_vpl_proforma_submission_form $mfo
     }
 
     // Replace execution files with task file
-    $filemgr->delete_all_execution_files(true);
+    // Delete all existing execution files except the proforma_settings.sh if there is any
+    $filemgr->delete_all_execution_files(true, array(PROFORMA_SETTINGS_FILENAME));
     $filemgr->add_execution_file('task/' . $filename, $filecontent, true); // Add task file to "Execution files" tab
 
     if ($filetype == 'zip') {
@@ -148,6 +149,9 @@ function setup_proforma_task(mod_vpl $vpl, mod_vpl_proforma_submission_form $mfo
     $assets = $releasefetcher->get_release_assets($selectedrelease);
 
     foreach ($assets as $asset) {
+        if ($asset['name'] === PROFORMA_SETTINGS_FILENAME && $filemgr->does_execution_file_exist(PROFORMA_SETTINGS_FILENAME)) {
+            continue;
+        }
         $assetfilecontent = download_file($asset['url']);
         $filemgr->add_execution_file($asset['name'], $assetfilecontent, true);
     }
@@ -287,7 +291,7 @@ function download_file(string $url): string {
  * Checks if a value is a non-empty string and returns it if true
  * Returns an invalid_parameter_exception if the value isn't a non-empty string
  */
-function set_string_or_throw(mixed $value): string {
+function isset_string_or_throw(mixed $value): string {
     if (isset($value) && is_string($value) && $value !== '') {
         return $value;
     } else {
@@ -299,7 +303,7 @@ function set_string_or_throw(mixed $value): string {
  * Cheks if a value is a non-empty string that is contained as key in $array
  */
 function set_string_in_array_or_throw(mixed $key, array $array): string {
-    $index = set_string_or_throw($key);
+    $index = isset_string_or_throw($key);
     if (array_key_exists($index, $array)) {
         $result = $array[$index];
         if (is_string($result)) {

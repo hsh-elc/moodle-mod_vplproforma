@@ -19,12 +19,20 @@ class proforma_file_manager {
     }
 
     /**
+     * Returns true if $filename exists in the "Execution files" tab
+     */
+    public function does_execution_file_exist(string $filename): bool {
+        $executionfiles = $this->execution_fgm->getfilelist();
+        return in_array($filename, $executionfiles, true);
+    }
+
+    /**
      * Adds a file to the "Execution files" tab
      * 
      * @param bool $keepfilewhenrunning if true, also add the file to the "Files to keep when running" tab
      */
     public function add_execution_file(string $filename, string $filecontent, bool $keepfilewhenrunning = false): void {
-        $success = $this->execution_fgm->addFile($filename, $filecontent);
+        $success = $this->execution_fgm->addfile($filename, $filecontent);
         if (!$success) {
             throw new moodle_exception('File "' . $filename . '" could not be added to the Execution files tab.');
         }
@@ -34,11 +42,18 @@ class proforma_file_manager {
     }
 
     /**
+     * Returns true if $filename is marked as "keep" in the "Files to keep when running" tab
+     */
+    public function is_execution_file_in_keep_list(string $filename): bool {
+        $keepfiles = $this->execution_fgm->getfilekeeplist();
+        return in_array($filename, $keepfiles, true);
+    }
+
+    /**
      * Marks a file from the "Execution files" tab as "keep" in the "Files to keep when running" tab
      */
     public function add_execution_file_to_keep_list(string $filename): void {
-        $executionfiles = $this->execution_fgm->getfilelist();
-        if (!in_array($filename, $executionfiles)) {
+        if (!$this->does_execution_file_exist($filename)) {
             throw new invalid_parameter_exception('File "' . $filename . '" not found in Execution files tab');
         }
 
@@ -56,11 +71,27 @@ class proforma_file_manager {
 
     /**
      * Deletes all files from the "Execution files" tab
+     * 
+     * @param bool $clearkeepfileswhenrunning also clears all entries from the "Files to keep when running" tab
+     * @param array $except filenames that should not be deleted
      */
-    public function delete_all_execution_files(bool $clearkeepfileswhenrunning = false): void {
+    public function delete_all_execution_files(bool $clearkeepfileswhenrunning = false, array $except = array()): void {
+        $exceptfiles = array();
+        foreach ($except as $exceptfile) {
+            if ($this->does_execution_file_exist($exceptfile)) {
+                $exceptfiles[] = [
+                    'name' => $exceptfile,
+                    'data' => $this->execution_fgm->getfiledata($exceptfile),
+                    'keep' => $this->is_execution_file_in_keep_list($exceptfile)
+                ];
+            }
+        }
         $this->execution_fgm->deleteallfiles();
         if ($clearkeepfileswhenrunning) {
             $this->clear_execution_files_keep_list();
+        }
+        foreach ($exceptfiles as $exceptfile) {
+            $this->add_execution_file($exceptfile['name'], $exceptfile['data'], $exceptfile['keep']);
         }
     }
 
@@ -68,7 +99,7 @@ class proforma_file_manager {
      * Adds a file to the "Requested files" tab
      */
     public function add_required_file(string $filename, string $filecontent): void {
-        $success = $this->required_fgm->addFile($filename, $filecontent);
+        $success = $this->required_fgm->addfile($filename, $filecontent);
         if (!$success) {
             throw new moodle_exception(
                 'File "' . $filename . '" could not be added to the Requested files tab. Check if "Maximum number of files" in VPL activity settings is large enough.'
