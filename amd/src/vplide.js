@@ -514,17 +514,25 @@ var VPLIDE = function(rootId, options) {
                 if (files[pos].getId() < this.minNumberOfFiles) {
                     throw new Error("Internal error: Renaming requested filename");
                 }
+                // No change.
                 if (files[pos].getFileName() == newname) {
                     return true; // Equals name file.
                 }
+                // No valid new name.
                 if (!VPLUtil.validPath(newname) ||
                         fileNameIncluded(newname, pos) ||
                         twoBlockly(oldname, newname)) {
                     throw str('incorrect_file_name');
                 }
-                if (VPLUtil.isBinary(oldname) && VPLUtil.fileExtension(oldname) != VPLUtil.fileExtension(newname)) {
+                // Binary files cannot change extension.
+                if (files[pos].isBinary() && VPLUtil.fileExtension(oldname) != VPLUtil.fileExtension(newname)) {
                     throw str('incorrect_file_name');
                 }
+                // Can not change from binary to text or viceversa.
+                if (files[pos].isBinary() != VPLUtil.isBinary(newname)) {
+                    throw str('incorrect_file_name');
+                }
+                // Can not change from blockly to text or viceversa.
                 if (VPLUtil.isBlockly(oldname) != VPLUtil.isBlockly(newname)) {
                     if (files[pos].getContent() > '') {
                         showMessage(str('delete_file_fq', oldname), {
@@ -596,7 +604,7 @@ var VPLIDE = function(rootId, options) {
                         if (files[i].getId() < this.minNumberOfFiles) { // Renaming required filename
                             throw str('incorrect_file_name');
                         }
-                        newFileNames[i] = newName + '/' + fileName.substr(oldNameLength);
+                        newFileNames[i] = newName + '/' + fileName.substring(oldNameLength);
                     }
                 }
                 if (this.directoryExists(newName)) { // Checks if the merge is possible (no repeated names)
@@ -983,10 +991,10 @@ var VPLIDE = function(rootId, options) {
         show = show || gradeShow;
         hasContent = self.setResultTab('variables', res.variables, res.variables);
         show = show || hasContent;
-        formated = VPLUtil.processResult(res.compilation, fileNames, files, true, false);
+        formated = VPLUtil.processResult(res.compilation, fileNames, files, true, true, false);
         hasContent = self.setResultTab('compilation', formated, res.compilation);
         show = show || hasContent;
-        formated = VPLUtil.processResult(res.evaluation, fileNames, files, false, false);
+        formated = VPLUtil.processResult(res.evaluation, fileNames, files, false, true, false);
         hasContent = self.setResultTab('comments', formated, res.evaluation);
         show = show || hasContent;
         formated = VPLUtil.sanitizeText(res.execution);
@@ -1003,10 +1011,10 @@ var VPLIDE = function(rootId, options) {
             result.accordion("refresh");
             result.accordion('option', 'active', gradeShow ? 1 : 0);
             for (i = 0; i < files.length; i++) {
-                var anot = files[i].getAnnotations();
-                for (var j = 0; j < anot.length; j++) {
-                    if (go || anot[j].type == 'error') {
-                        fileManager.gotoFile(i, anot[j].row + 1);
+                var annotations = files[i].getAnnotations();
+                for (var j = 0; j < annotations.length; j++) {
+                    if (go || annotations[j].type == 'error') {
+                        fileManager.gotoFile(i, annotations[j].row + 1);
                         break;
                     }
                 }

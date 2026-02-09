@@ -23,16 +23,6 @@
  * @author Juan Carlos Rodríguez-del-Pino <jcrodriguez@dis.ulpgc.es>
  */
 
-/**
- * Module instance files
- * path= vpl_data//vpl_instance#
- * Submission info
- * path/usersdata/userid#/submissionid#/submittedfiles.lst
- * path/usersdata/userid#/submissionid#/submittedfiles/
- * path/usersdata/userid#/submissionid#/grade_comments.txt
- * path/usersdata/userid#/submissionid#/teachertest.txt
- * path/usersdata/userid#/submissionid#/studenttest.txt
- */
 defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once(dirname(__FILE__) . '/vpl.class.php');
@@ -422,7 +412,7 @@ class mod_vpl_submission {
             $value = format_float($value, 2, true, true);
         }
         $vplinstance = $this->vpl->get_instance();
-        $html = $this->vpl->str_restriction('finalreduction', $value);
+        $html = $this->vpl->str_setting('finalreduction', $value);
         $html .= ' [' . $this->instance->nevaluations;
         $html .= ' / ' . $vplinstance->freeevaluations;
         $html .= ' -' . $vplinstance->reductionbyevaluation . ']';
@@ -718,9 +708,9 @@ class mod_vpl_submission {
     }
 
     /**
-     * Get core grade @parm optional grade to show
+     * Get core grade
      *
-     * @param ?float $grade grade to show, if null then get from gradebook
+     * @param ?float $grade Optional grade to show; if null then get from gradebook
      * @return string
      */
     public function get_grade_core($grade = null) {
@@ -786,40 +776,50 @@ class mod_vpl_submission {
      *
      * @param string $title Title to show
      * @param string $comment Content to process
-     * @param bool $empty Process empty comment
-     * @return string
+     * @param bool $showempty Show empty comment
+     * @param bool $noformat If true then no format the text
+     * @param bool $addlinks If true then add links to files
+     * @param bool $folding If true then enable folding
+     * @return string HTML processed comment
      */
-    public function get_processed_comment($title, $comment, $empty = false) {
+    public function get_processed_comment(
+        $title,
+        $comment,
+        $showempty = false,
+        $noformat = false,
+        $addlinks = true,
+        $folding = true
+    ): string {
         global $PAGE;
         $ret = '';
         $tag = ($title == 'compilation' || $title == 'execution') ? 'pre' : 'div';
-        if (strlen($comment) > 0 || $empty) {
+        if (strlen($comment) > 0 || $showempty) {
             $div = new mod_vpl\util\hide_show(true);
             $ret = '<b>' . get_string($title, VPL) . $div->generate() . '</b><br>';
-            $ret .= $div->content_in_tag($tag, format_text($comment, FORMAT_PLAIN));
-            $PAGE->requires->js_call_amd('mod_vpl/vplutil', 'addResults', [$div->get_tag_id(), false, true]);
+            $ret .= $div->content_in_tag($tag, s($comment));
+            $PAGE->requires->js_call_amd('mod_vpl/vplutil', 'addResults', [$div->get_tag_id(), $noformat, $addlinks, $folding]);
         }
         return $ret;
     }
 
     /**
-     * Return sudmission detailed grade part in html format
+     * Return submission detailed grade part in HTML format
      *
-     * @param bool $process if true then process comments (default true)
+     * @param bool $process If true then process comments (default true)
      * @return string
      */
     public function get_detailed_grade($process = true) {
         global $PAGE;
         $ret = $this->reduce_grade_string() . '<br>';
         $feedback = $this->get_grade_comments($process);
-        $ret .= $this->get_processed_comment('gradercomments', $feedback);
+        $ret .= $this->get_processed_comment('gradercomments', $feedback, false, false, true, true);
         return $ret;
     }
 
     /**
-     * Print sudmission grade
+     * Print submission grade
      *
-     * @param bool $detailed show detailed grade (default false)
+     * @param bool $detailed Show detailed grade (default false)
      * @param bool $return If true return string else print grade (default false)
      * @return string|void
      */
@@ -834,7 +834,7 @@ class mod_vpl_submission {
             $a->gradername = fullname($grader);
             $ret .= get_string('gradedonby', VPL, $a) . '<br>';
             if ($this->vpl->get_grade() != 0) {
-                $ret .= $this->vpl->str_restriction(vpl_get_gradenoun_str(), $this->get_grade_core(), false, 'core') . '<br>';
+                $ret .= $this->vpl->str_setting(vpl_get_gradenoun_str(), $this->get_grade_core(), false, 'core') . '<br>';
                 if ($detailed) {
                     $ret .= $this->get_detailed_grade();
                 }
@@ -867,7 +867,7 @@ class mod_vpl_submission {
             }
 
             if (! empty($CFG->enableoutcomes)) {
-                // Bypass unknow gradelib not load.
+                // Bypass unknown gradelib not loaded.
                 if (! function_exists('grade_get_grades')) {
                     require_once($CFG->libdir . '/gradelib.php');
                 }
@@ -895,8 +895,9 @@ class mod_vpl_submission {
     }
 
     /**
-     * Print sudmission info
-     * @param bool $autolink Add links. default = false
+     * Print submission info
+     *
+     * @param bool $autolink Add links. Default = false
      */
     public function print_info($autolink = false) {
         // TODO improve show submission info.
@@ -967,13 +968,14 @@ class mod_vpl_submission {
         if ($ce['compilation'] === 0) {
             return '';
         }
+        $addlinks = ! $this->is_graded();
         $ret = '';
         $compilation = '';
         $execution = '';
         $grade = '';
         $this->get_ce_html($ce, $compilation, $execution, $grade, true, true);
         if (strlen($compilation) + strlen($execution) + strlen($grade) > 0) {
-            $div = new mod_vpl\util\hide_show(! $this->is_graded() || ! $this->vpl->get_visiblegrade());
+            $div = new mod_vpl\util\hide_show(! $this->is_graded());
             $ret .= '<b>' . get_string('automaticevaluation', VPL) . $div->generate() . '</b>';
             $ret .= $div->begin('div');
             $ret .= $OUTPUT->box_start();
@@ -982,10 +984,10 @@ class mod_vpl_submission {
                 $ret .= $this->reduce_grade_string() . '<br>';
             }
             $compilation = $ce['compilation'];
-            $ret .= $this->get_processed_comment('compilation', $compilation);
+            $ret .= $this->get_processed_comment('compilation', $compilation, false, true, $addlinks, false);
             if (strlen($execution) > 0) {
                 $proposedcomments = $this->proposedcomment($ce['execution']);
-                $ret .= $this->get_processed_comment('comments', $proposedcomments, true);
+                $ret .= $this->get_processed_comment('comments', $proposedcomments, true, false, $addlinks, true);
             }
             $ret .= $OUTPUT->box_end();
             $ret .= $div->end();
@@ -999,16 +1001,22 @@ class mod_vpl_submission {
     }
 
     /**
-     * Print sudmission
+     * Print submission
      */
     public function print_submission() {
         $this->print_info();
         if ($this->vpl->has_capability(VPL_GRADE_CAPABILITY)) {
             $this->vpl->print_variation($this->instance->userid);
         }
-        // Not automatic graded show proposed evaluation.
-        if (! $this->is_graded() || ! $this->vpl->get_visiblegrade() || $this->vpl->has_capability(VPL_GRADE_CAPABILITY)) {
-            $this->print_CE();
+        // Compute to show or not submission compilation and execution.
+        // Yes, if it is not graded and student can evaluate.
+        $show = ! $this->is_graded() && $this->vpl->get_instance()->evaluate;
+        // Yes, if user is a grader(teacher).
+        $show = $show || $this->vpl->has_capability(VPL_GRADE_CAPABILITY);
+        // No, if automatic graded, because already shown in feedbacks.
+        $show = $show && ! ($this->is_graded() && $this->instance->grader == 0);
+        if ($show) {
+            $this->print_ce();
         }
         $this->get_submitted_fgm()->print_files();
     }
@@ -1282,7 +1290,7 @@ class mod_vpl_submission {
         $list[$text]->grades[$grade] = true;
     }
     /**
-     *  Processs grade comments to generate a list of feedbacks
+     * Process grade comments to generate a list of feedbacks
      *
      * @param array $list List to be filled with feedbacks
      */
@@ -1421,7 +1429,7 @@ class mod_vpl_submission {
                 $sgrade = $this->get_grade_core($proposedgrade);
                 $grade = get_string('proposedgrade', VPL, $sgrade);
             }
-            // Show raw ejecution if no grade or comments.
+            // Show raw execution if no grade or comments.
             if (strlen($rawexecution) > 0 && (strlen($execution) + strlen($proposedgrade) == 0)) {
                 $execution .= "<br>\n";
                 $execution .= '<b>' . get_string('execution', VPL) . "</b><br>\n";
@@ -1430,7 +1438,7 @@ class mod_vpl_submission {
                 $returnrawexecution && strlen($rawexecution) > 0
                        && ($this->vpl->has_capability(VPL_MANAGE_CAPABILITY))
             ) {
-                // Show raw ejecution if manager and $returnrawexecution.
+                // Show raw execution if manager and $returnrawexecution.
                 $div = new mod_vpl\util\hide_show();
                 $execution .= "<br>\n";
                 $execution .= '<b>' . get_string('execution', VPL) . $div->generate() . "</b><br>\n";
@@ -1472,7 +1480,7 @@ class mod_vpl_submission {
                 $sgrade = $this->get_grade_core($proposedgrade);
                 $ce->grade = get_string('proposedgrade', VPL, $sgrade);
             }
-            // Show raw ejecution if no grade or comments.
+            // Show raw execution if no grade or comments.
             $manager = $this->vpl->has_capability(VPL_MANAGE_CAPABILITY);
             if ((strlen($rawexecution) > 0 && (strlen($evaluation) + strlen($proposedgrade) == 0)) || $manager) {
                 $ce->execution = $rawexecution;
@@ -1494,7 +1502,7 @@ class mod_vpl_submission {
             if ($ret > '') {
                 $ret .= ', ';
             }
-            // TODO too slow calculus.
+            // TODO too slow calculation.
             $nl = vpl_detect_newline($data);
             $ret .= $filename . ' ' . strlen($data) . 'b ' . count(explode($nl, $data)) . 'l';
         }

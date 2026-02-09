@@ -130,6 +130,8 @@ VPLUtil.String2ArrayBuffer = function(data) {
 (function() {
     var regExt = /\.([^.]*)$/;
     var regImg = /^(gif|jpg|jpeg|png|ico)$/i;
+    var regAudio = /^(wav|aiff|pcm|mp3|aac|ogg|oga|wma|m4a|flac|alac|ape|wv|amr)$/i;
+    var regVideo = /^(mp4|webm|ogv|avi|mov|wmv|flv|mkv|m4v|mpeg|mpg|3gp)$/i;
     var regBin = /^(zip|jar|pdf|tar|bin|7z|arj|deb|gzip|rar|rpm|dat|db|dll|rtf|doc|docx|odt|exe|com)$/i;
     var regBlk = /^blockly[0123]?$/;
     VPLUtil.fileExtension = function(fileName) {
@@ -139,8 +141,44 @@ VPLUtil.String2ArrayBuffer = function(data) {
     VPLUtil.isImage = function(fileName) {
         return regImg.test(VPLUtil.fileExtension(fileName));
     };
-    VPLUtil.isBinary = function(fileName) {
-        return VPLUtil.isImage(fileName) || regBin.test(VPLUtil.fileExtension(fileName));
+    VPLUtil.isAudio = function(fileName) {
+        return regAudio.test(VPLUtil.fileExtension(fileName));
+    };
+    VPLUtil.isVideo = function(fileName) {
+        return regVideo.test(VPLUtil.fileExtension(fileName));
+    };
+    VPLUtil.isBinary = function(fileName, fileContents) {
+        // Check by extension first.
+        if (VPLUtil.isImage(fileName) || VPLUtil.isAudio(fileName) || VPLUtil.isVideo(fileName)
+            || regBin.test(VPLUtil.fileExtension(fileName))) {
+            return true;
+        }
+        // @Astor-Bizard binary file detection.
+        if (typeof fileContents === 'undefined' || !fileContents) {
+            return false;
+        }
+        var textBytes = [7, 8, 9, 10, 12, 13, 27]
+                        .concat([...Array(0x5f).keys()].map(i => i + 0x20)) // Include [0x20 -> 0x7e].
+                        .concat([...Array(0x80).keys()].map(i => i + 0x80)); // Include [0x80 -> 0xff].
+        textBytes = Object.entries(textBytes).reduce((obj, [key, value]) => ({...obj, [value]: key}), {});
+        var bytes = null;
+        if (fileContents instanceof Uint8Array) {
+            bytes = fileContents;
+        } else if (fileContents instanceof ArrayBuffer) {
+            bytes = new Uint8Array(fileContents);
+        } else if (fileContents instanceof String || typeof fileContents === 'string') {
+            bytes = (new TextEncoder()).encode(fileContents.substring(0, 512));
+        } else {
+            return false;
+        }
+        var sizechecked = Math.min(1024, bytes.length);
+        for (var i = 0; i < sizechecked; i++) {
+            if (!textBytes.hasOwnProperty(bytes[i])) {
+                // Byte is not a standard text byte, file is likely binary.
+                return true;
+            }
+        }
+        return false;
     };
     VPLUtil.isBlockly = function(fileName) {
         return regBlk.test(VPLUtil.fileExtension(fileName));
@@ -158,20 +196,6 @@ VPLUtil.String2ArrayBuffer = function(data) {
 })();
 VPLUtil.getCurrentTime = function() {
     return parseInt((new Date()).valueOf() / 1000);
-};
-VPLUtil.encodeBinary = function(name, data) {
-    if (!VPLUtil.isBinary(name)) {
-        return btoa(unescape(encodeURIComponent(data)));
-    }
-    return btoa(VPLUtil.ArrayBuffer2String(data));
-};
-
-VPLUtil.decodeBinary = function(name, data) {
-    var decoded = atob(data);
-    if (!VPLUtil.isBinary(name)) {
-        return decodeURIComponent(escape(decoded));
-    }
-    return VPLUtil.String2ArrayBuffer(decoded);
 };
 
 VPLUtil.validPath = function(path) {
@@ -191,7 +215,7 @@ VPLUtil.getFileName = function(path) {
     return dirs[dirs.length - 1];
 };
 VPLUtil.dataFromURLData = function(data) {
-    return data.substr(data.indexOf(',') + 1);
+    return data.substring(data.indexOf(',') + 1);
 };
 
 (function() {
@@ -201,7 +225,35 @@ VPLUtil.dataFromURLData = function(data) {
         'jpeg': 'image/jpeg',
         'png': 'image/png',
         'ico': 'image/vnd.microsoft.icon',
-        'pdf': 'application/pdf'
+        'pdf': 'application/pdf',
+        // Audio formats
+        'wav': 'audio/wav',
+        'aiff': 'audio/aiff',
+        'pcm': 'audio/pcm',
+        'mp3': 'audio/mpeg',
+        'aac': 'audio/aac',
+        'oga': 'audio/ogg',
+        'ogg': 'audio/ogg',
+        'wma': 'audio/x-ms-wma',
+        'm4a': 'audio/mp4',
+        'flac': 'audio/flac',
+        'alac': 'audio/alac',
+        'ape': 'audio/x-ape',
+        'wv': 'audio/x-wavpack',
+        'amr': 'audio/amr',
+        // Video formats
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'ogv': 'video/ogg',
+        'avi': 'video/x-msvideo',
+        'mov': 'video/quicktime',
+        'wmv': 'video/x-ms-wmv',
+        'flv': 'video/x-flv',
+        'mkv': 'video/x-matroska',
+        'm4v': 'video/x-m4v',
+        'mpeg': 'video/mpeg',
+        'mpg': 'video/mpeg',
+        '3gp': 'video/3gpp'
     };
     VPLUtil.getMIME = function(fileName) {
         var ext = VPLUtil.fileExtension(fileName);
@@ -230,10 +282,10 @@ VPLUtil.dataFromURLData = function(data) {
         var minutes = parseInt(timePending / minute);
         timePending -= minutes * minute;
         var seconds = parseInt(timePending);
-        res += ('00' + hours).substr(-2) + ':';
-        res += ('00' + minutes).substr(-2);
+        res += ('00' + hours).slice(-2) + ':';
+        res += ('00' + minutes).slice(-2);
         if (timeLeft < hour) {
-            res += ':' + ('00' + seconds).substr(-2);
+            res += ':' + ('00' + seconds).slice(-2);
         }
         return res;
     };
@@ -607,7 +659,17 @@ VPLUtil.directRun = function(URL, command, files) {
             log.debug("Direct run fail. URL: " + URL + " command: " + command + " message: " + message);
         });
 };
-VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
+/**
+ * Process the result text to generate HTML with links to files and folding
+ * @param {string} text Text to process
+ * @param {string} filenames Array of filenames to generate links
+ * @param {object} sh Array of ace editors corresponding to filenames
+ * @param {boolean} noFormat If true do not format the text
+ * @param {boolean} addLinks If true add links to files
+ * @param {boolean} folding If true add folding to titles
+ * @returns {string} HTML processed
+ */
+VPLUtil.processResult = function(text, filenames, sh, noFormat, addLinks, folding) {
     if (typeof text == 'undefined' || text.replace(/^\s+$/gm, '') == '') {
         return '';
     }
@@ -622,7 +684,6 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
     var regtitgra = /\([-]?[\d]+[.]?[\d]*\)\s*$/;
     var regtit = /^-/;
     var regcas = /^\s*>/;
-    // TODO adds error? use first anotation for icon.
     var regError = new RegExp('\\[err\\]|error|' + escReg(VPLUtil.str('error')), 'i');
     var regWarning = new RegExp('\\[warn\\]|warning|note|' + escReg(VPLUtil.str('warning')), 'i');
     var regInformation = new RegExp('\\[info\\]|information', 'i');
@@ -632,8 +693,8 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
     var case_ = '';
     var lines = text.split(/\r\n|\n|\r/);
     var regFiles = [];
-    var lastAnotation = false;
-    var lastAnotationFile = false;
+    var lastAnnotation = false;
+    var lastAnnotationFile = false;
     var afterTitle = false;
     /**
      * Generate attribute href for the editor in sh
@@ -657,12 +718,15 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
         }
     })();
     /**
-     * Generate the file links in the comments to point to the files
+     * Generate the file links in the comments to point to the files and add annotations
      * @param {string} line Line to modify
      * @param {string} rawline Text to include in annotation
      * @returns {string} The line modified
      */
     function genFileLinks(line, rawline) {
+        if (!addLinks) {
+            return line;
+        }
         var used = false;
         for (var i = 0; i < regFiles.length; i++) {
             var reg = regFiles[i];
@@ -670,7 +734,7 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
             while ((match = reg.exec(line)) !== null) {
                 var anot = sh[i].getAnnotations();
                 // Annotation format {row:,column:,raw:,type:error,warning,info;text} .
-                lastAnotationFile = i;
+                lastAnnotationFile = i;
                 used = true;
                 var type;
                 if (line.search(regError) > -1) {
@@ -682,13 +746,13 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
                 } else {
                     type = 'error';
                 }
-                lastAnotation = {
+                lastAnnotation = {
                     'row': (match[3] - 1),
                     'column': match[5],
                     'type': type,
                     'text': rawline,
                 };
-                anot.push(lastAnotation);
+                anot.push(lastAnnotation);
                 var fileName = filenames[i];
                 var href = getHref(i);
                 var lt = VPLUtil.sanitizeText(fileName);
@@ -697,12 +761,12 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
                 sh[i].setAnnotations(anot);
             }
         }
-        if (!used && lastAnotation) {
+        if (!used && lastAnnotation) {
             if (rawline !== '') {
-                lastAnotation.text += "\n" + rawline;
-                sh[lastAnotationFile].setAnnotations(sh[lastAnotationFile].getAnnotations());
+                lastAnnotation.text += "\n" + rawline;
+                sh[lastAnnotationFile].setAnnotations(sh[lastAnnotationFile].getAnnotations());
             } else {
-                lastAnotation = false;
+                lastAnnotation = false;
             }
         }
         return line;
@@ -713,11 +777,11 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
      * @returns {string} Line in HTML format
      */
     function getTitle(line) {
-        lastAnotation = false;
-        line = line.substr(1);
+        lastAnnotation = false;
+        line = line.substring(1);
         var end = regtitgra.exec(line);
         if (end !== null) {
-            line = line.substr(0, line.length - end[0].length);
+            line = line.substring(0, line.length - end[0].length);
         }
         var html = '';
         if (folding) {
@@ -732,7 +796,7 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
      * @returns {string}
      */
     function getComment() {
-        lastAnotation = false;
+        lastAnnotation = false;
         var ret = comment;
         comment = '';
         return ret;
@@ -758,7 +822,7 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
      * @returns {string}
      */
     function getCase() {
-        lastAnotation = false;
+        lastAnnotation = false;
         var ret = case_;
         case_ = '';
         return '<pre>' + ret + '</pre>';
@@ -795,7 +859,7 @@ VPLUtil.processResult = function(text, filenames, sh, noFormat, folding) {
             if (state == 'comment') {
                 html += getComment();
             }
-            addCase(line.substr(match[0].length));
+            addCase(line.substring(match[0].length));
             state = 'case';
         } else {
             if (state == 'case') {
@@ -982,7 +1046,7 @@ VPLUtil.loadModule = function(module, variable) {
             }
         }
         if (needAce && typeof ace === 'undefined') {
-            VPLUtil.loadScript(['/ace9/ace.js'],
+            VPLUtil.loadScript(['/../../thirdpartylibs/ace/ace.js'],
                 function() {
                     self.highlight();
                 });
@@ -1017,8 +1081,25 @@ VPLUtil.loadModule = function(module, variable) {
             sh.getAnnotations = function() {
                 return this.getSession().getAnnotations();
             };
+            sh.cleanAnnotations = function(annotations) {
+                // Prevent more than 5 annotations for line.
+                const MAX_ANNOTATIONS_PER_LINE = 5;
+                var counts = {};
+                var res = [];
+                for (var i = 0; i < annotations.length; i++) {
+                    var annot = annotations[i];
+                    if (typeof counts[annot.row] == 'undefined') {
+                        counts[annot.row] = 0;
+                    }
+                    if (counts[annot.row] < MAX_ANNOTATIONS_PER_LINE) {
+                        res.push(annot);
+                    }
+                    counts[annot.row]++;
+                }
+                return res;
+            };
             sh.setAnnotations = function(a) {
-                return this.getSession().setAnnotations(a);
+                return this.getSession().setAnnotations(this.cleanAnnotations(a));
             };
             sh.getTagId = function() {
                 return this.vplTagId;
@@ -1043,14 +1124,14 @@ VPLUtil.loadModule = function(module, variable) {
         var tag = document.getElementById(result.tagId);
         var text = tag.textContent || tag.innerText;
         tag.innerHTML = VPLUtil.processResult(text, this.shFileNames, this.shFiles,
-            result.noFormat, result.folding);
+            result.noFormat, result.addLinks, result.folding);
         VPLUtil.delay(result.tagId + ".next", function() {
             self.resultStep(pos + 1);
         });
     };
 
-    VPLUtil.addResults = function(tagId, noFormat, folding) {
-        results.push({'tagId': tagId, 'noFormat': noFormat, 'folding': folding});
+    VPLUtil.addResults = function(tagId, noFormat, addLinks, folding) {
+        results.push({'tagId': tagId, 'noFormat': noFormat, 'addLinks': addLinks, 'folding': folding});
     };
     VPLUtil.syntaxHighlightFile = function(tagId, fileName, theme, showln, nl) {
         files.push({

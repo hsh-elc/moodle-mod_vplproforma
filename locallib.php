@@ -650,31 +650,56 @@ function vpl_is_image($filename) {
  * @codeCoverageIgnore
  */
 function vpl_is_audio($filename) {
-    $audioext = 'wav|aiff|pcm|mp3|aac|ogg|wma|m4a|flac|alac|ape|wv|amr';
+    $audioext = 'wav|aiff|pcm|mp3|aac|ogg|oga|wma|m4a|flac|alac|ape|wv|amr';
     return preg_match('/^(' . $audioext . ')$/i', vpl_fileextension($filename)) == 1;
+}
+
+/**
+ * Get if filename has video extension
+ *
+ * @param string $filename
+ * @return boolean
+ * @codeCoverageIgnore
+ */
+function vpl_is_video($filename) {
+    $videoext = 'mp4|webm|ogv|avi|mov|wmv|flv|mkv|m4v|mpeg|mpg|3gp';
+    return preg_match('/^(' . $videoext . ')$/i', vpl_fileextension($filename)) == 1;
 }
 
 /**
  * Get if filename has binary extension or binary data
  *
  * @param string $filename
- * @param string $data file contents
+ * @param string $data file contents (optional)
  * @return bool
  * @codeCoverageIgnore
  */
 function vpl_is_binary($filename, &$data = false) {
-    if (vpl_is_image($filename) || vpl_is_audio($filename)) {
+    if (vpl_is_image($filename) || vpl_is_audio($filename) || vpl_is_video($filename)) {
         return true;
     }
+    // Check by extension first.
     $fileext = 'zip|jar|pdf|tar|bin|7z|arj|deb|gzip|';
     $fileext .= 'rar|rpm|dat|db|dll|rtf|doc|docx|odt|exe|com';
     if (preg_match('/^(' . $fileext . ')$/i', vpl_fileextension($filename)) == 1) {
         return true;
     }
-    if ($data === false) {
+    // Astor-Bizard: Check data for binary chars.
+    if (empty($data)) {
         return false;
     }
-    return mb_detect_encoding($data, 'UTF-8', true) != 'UTF-8';
+    static $sizechecked = 1024;
+    static $textbytes = null;
+    if ($textbytes === null) {
+        $textbytes = array_flip(array_merge([ 7, 8, 9, 10, 12, 13, 27 ], range(0x20, 0x7e), range(0x80, 0xff)));
+    }
+    foreach (unpack('C*', substr($data, 0, $sizechecked)) as $byte) {
+        if (!isset($textbytes[$byte])) {
+            // Byte is not a standard text byte, file is likely binary.
+            return true;
+        }
+    }
+    return false;
 }
 
 /**

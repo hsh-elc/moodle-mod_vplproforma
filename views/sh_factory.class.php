@@ -95,12 +95,17 @@ class vpl_sh_factory {
      * Get the syntaxhighlighter object for a file
      *
      * @param string $filename name of the file
+     * @param string|null $data content of the file (optional)
      * @return vpl_sh_base object to show the file
      */
-    public static function get_sh($filename) {
-        if (vpl_is_binary($filename)) {
+    public static function get_sh($filename, &$data = null) {
+        if (vpl_is_binary($filename, $data)) {
             if (vpl_is_image($filename)) {
                 return self::get_object('image');
+            } else if (vpl_is_audio($filename)) {
+                return self::get_object('audio');
+            } else if (vpl_is_video($filename)) {
+                return self::get_object('video');
             } else {
                 return self::get_object('binary');
             }

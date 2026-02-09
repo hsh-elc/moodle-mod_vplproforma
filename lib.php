@@ -146,6 +146,46 @@ function vpl_delete_grade_item($instance) {
     $itemdetails = [ 'deleted' => 1 ];
     grade_update('mod/vpl', $instance->course, 'mod', VPL, $instance->id, 0, null, $itemdetails);
 }
+
+/**
+ * Callback to rescale all grades for this activity commonly due maxgrade change.
+ *
+ * @param stdClass $course Course object
+ * @param stdClass $cm Course module object
+ * @param float $oldmin Old minimum grade
+ * @param float $oldmax Old maximum grade
+ * @param float $newmin New minimum grade
+ * @param float $newmax New maximum grade
+ * @return bool True if rescaled, false otherwise
+ */
+function vpl_rescale_activity_grades($course, $cm, $oldmin, $oldmax, $newmin, $newmax) {
+    global $DB;
+    if ($oldmax <= $oldmin || $newmax <= $newmin) {
+        // Grades cannot be scaled.
+        return false;
+    }
+    $vpl = new mod_vpl($cm->id);
+    $scale = ($newmax - $newmin) / ($oldmax - $oldmin);
+    $params = [
+        'oldmin' => $oldmin,
+        'scale' => $scale,
+        'newmin' => $newmin,
+        'vplid' => $vpl->get_instance()->id,
+    ];
+    $sql = "
+        UPDATE {vpl_submissions}
+            SET grade = (((grade - :oldmin) * :scale) + :newmin)
+        WHERE vpl = :vplid and dategraded > 0
+    ";
+    $dbupdate = $DB->execute($sql, $params);
+    if (!$dbupdate) {
+        return false;
+    }
+    // Now update grades in gradebook.
+    vpl_update_grades($vpl->get_instance());
+    return true;
+}
+
 /**
  * Creates an event object from a vpl instance+id
  *
